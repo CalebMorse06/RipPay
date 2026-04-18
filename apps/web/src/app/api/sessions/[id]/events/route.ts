@@ -17,7 +17,7 @@ export const runtime = "nodejs";
  */
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const initial = sessionStore.get(id);
+  const initial = await sessionStore.get(id);
   if (!initial) {
     return new Response("Session not found", { status: 404 });
   }

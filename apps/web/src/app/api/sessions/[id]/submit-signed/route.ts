@@ -22,14 +22,14 @@ import { hashSignedBlob, submitSignedBlob, verifySignedBlob } from "@/server/xrp
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const session = sessionStore.get(id);
+  const session = await sessionStore.get(id);
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
   if (new Date(session.expiresAt).getTime() < Date.now()) {
     const expiredAt = new Date().toISOString();
-    const expired = sessionStore.update(id, { status: "EXPIRED", expiredAt });
+    const expired = await sessionStore.update(id, { status: "EXPIRED", expiredAt });
     if (expired) sessionEvents.emit(expired);
     return NextResponse.json({ error: "Session expired" }, { status: 410 });
   }

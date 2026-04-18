@@ -27,7 +27,7 @@ export default async function PayPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = sessionStore.get(id);
+  const session = await sessionStore.get(id);
   if (!session) notFound();
 
   return (

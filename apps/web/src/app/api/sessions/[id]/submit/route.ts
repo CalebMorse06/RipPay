@@ -15,7 +15,7 @@ import { hashSignedBlob, submitSignedBlob, verifySignedBlob } from "@/server/xrp
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const existing = sessionStore.get(id);
+  const existing = await sessionStore.get(id);
   if (!existing) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }

@@ -109,7 +109,7 @@ export default function ProcessingScreen({navigation, route}: Props) {
       let preparePayload: PrepareSessionResponse | null = null;
       try {
         preparePayload = await prepareSession(sessionId);
-        unsignedTx = preparePayload.unsignedTx;
+        unsignedTx = preparePayload.unsignedTx as XrplUnsignedTransaction;
       } catch (e) {
         if (e instanceof ApiError && e.code === 'PREPARE_NOT_IMPLEMENTED') {
           unsignedTx = null;

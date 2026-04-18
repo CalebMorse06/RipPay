@@ -13,7 +13,7 @@ export default async function SessionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = sessionStore.get(id);
+  const session = await sessionStore.get(id);
   if (!session) notFound();
 
   const headerList = await headers();

@@ -37,7 +37,7 @@ export async function submitSignedBlob(args: {
   txBlob: string;
   txHash: string;
 }): Promise<void> {
-  markSubmitted(args.sessionId, args.txHash);
+  await markSubmitted(args.sessionId, args.txHash);
 
   if (getXrplMode() === "mock") {
     scheduleMockProgression(args.sessionId);
@@ -60,16 +60,16 @@ async function submitReal(sessionId: string, txBlob: string, txHash: string): Pr
     log("submit", { sessionId, txHash, engineResult });
 
     if (!isProvisionallySuccessful(engineResult)) {
-      markFailed(sessionId, `submit: ${engineResult || "unknown"}`);
+      await markFailed(sessionId, `submit: ${engineResult || "unknown"}`);
       return;
     }
 
-    markValidating(sessionId);
+    await markValidating(sessionId);
     await trackValidation(client, sessionId, txHash);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     log("submit error", { sessionId, reason });
-    markFailed(sessionId, reason);
+    await markFailed(sessionId, reason);
   } finally {
     try {
       await client?.disconnect();
@@ -111,10 +111,10 @@ async function trackValidation(
 
       if (resultCode === "tesSUCCESS") {
         log("validated paid", { sessionId, txHash });
-        markPaid(sessionId, txHash);
+        await markPaid(sessionId, txHash);
       } else {
         log("validated failed", { sessionId, txHash, resultCode });
-        markFailed(sessionId, `validated: ${resultCode || "unknown"}`);
+        await markFailed(sessionId, `validated: ${resultCode || "unknown"}`);
       }
       return;
     } catch {
@@ -122,37 +122,37 @@ async function trackValidation(
     }
   }
   log("validation timeout", { sessionId, txHash });
-  markFailed(sessionId, "validation timeout");
+  await markFailed(sessionId, "validation timeout");
 }
 
 function scheduleMockProgression(sessionId: string) {
-  setTimeout(() => markValidating(sessionId), 1200);
-  setTimeout(() => {
-    const current = sessionStore.get(sessionId);
+  setTimeout(() => void markValidating(sessionId), 1200);
+  setTimeout(async () => {
+    const current = await sessionStore.get(sessionId);
     if (current && current.status === "VALIDATING" && current.txHash) {
-      markPaid(sessionId, current.txHash);
+      await markPaid(sessionId, current.txHash);
     }
   }, 3200);
 }
 
-function markSubmitted(sessionId: string, txHash: string): Session | undefined {
-  return emit(sessionStore.update(sessionId, { status: "SUBMITTED", txHash }));
+async function markSubmitted(sessionId: string, txHash: string): Promise<Session | undefined> {
+  return emit(await sessionStore.update(sessionId, { status: "SUBMITTED", txHash }));
 }
-function markValidating(sessionId: string): Session | undefined {
-  return emit(sessionStore.update(sessionId, { status: "VALIDATING" }));
+async function markValidating(sessionId: string): Promise<Session | undefined> {
+  return emit(await sessionStore.update(sessionId, { status: "VALIDATING" }));
 }
-function markPaid(sessionId: string, txHash: string): Session | undefined {
+async function markPaid(sessionId: string, txHash: string): Promise<Session | undefined> {
   return emit(
-    sessionStore.update(sessionId, {
+    await sessionStore.update(sessionId, {
       status: "PAID",
       txHash,
       paidAt: new Date().toISOString(),
     }),
   );
 }
-function markFailed(sessionId: string, reason: string): Session | undefined {
+async function markFailed(sessionId: string, reason: string): Promise<Session | undefined> {
   return emit(
-    sessionStore.update(sessionId, {
+    await sessionStore.update(sessionId, {
       status: "FAILED",
       failureReason: reason,
       failedAt: new Date().toISOString(),

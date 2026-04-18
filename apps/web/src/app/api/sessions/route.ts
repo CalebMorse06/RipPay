@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     updatedAt: now.toISOString(),
   };
 
-  sessionStore.create(session);
+  await sessionStore.create(session);
   sessionEvents.emit(session);
   return NextResponse.json(session, { status: 201 });
 }

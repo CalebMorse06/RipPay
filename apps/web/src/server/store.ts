@@ -1,50 +1,93 @@
 import type { Session, SessionStatus } from "@coldtap/shared";
 
-export interface SessionStore {
-  create(session: Session): Session;
-  get(id: string): Session | undefined;
-  update(id: string, patch: Partial<Session>): Session | undefined;
-  list(): Session[];
+declare global {
+  // eslint-disable-next-line no-var
+  var __coldtapStore: import("./store").SessionStore | undefined;
 }
+
+const SESSION_TTL_SEC = 3600; // 1 hour — well beyond the 10-min session expiry
+
+export interface SessionStore {
+  create(session: Session): Promise<Session>;
+  get(id: string): Promise<Session | undefined>;
+  update(id: string, patch: Partial<Session>): Promise<Session | undefined>;
+  list(): Promise<Session[]>;
+}
+
+// ── In-memory implementation (local dev / tests) ─────────────────────────────
 
 class InMemoryStore implements SessionStore {
   private readonly sessions = new Map<string, Session>();
 
-  create(session: Session): Session {
+  async create(session: Session): Promise<Session> {
     this.sessions.set(session.id, session);
     return session;
   }
 
-  get(id: string): Session | undefined {
+  async get(id: string): Promise<Session | undefined> {
     return this.sessions.get(id);
   }
 
-  update(id: string, patch: Partial<Session>): Session | undefined {
+  async update(id: string, patch: Partial<Session>): Promise<Session | undefined> {
     const current = this.sessions.get(id);
     if (!current) return undefined;
-    const next: Session = {
-      ...current,
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    };
+    const next: Session = { ...current, ...patch, updatedAt: new Date().toISOString() };
     this.sessions.set(id, next);
     return next;
   }
 
-  list(): Session[] {
+  async list(): Promise<Session[]> {
     return Array.from(this.sessions.values());
   }
 }
 
-// Attach to globalThis so Next.js dev hot-reload does not wipe session state
-// between edits — the module is re-evaluated but the object reference survives.
-declare global {
-  // eslint-disable-next-line no-var
-  var __coldtapStore: InMemoryStore | undefined;
+// ── Vercel KV implementation (production) ────────────────────────────────────
+
+class KvStore implements SessionStore {
+  private kv: import("@vercel/kv").VercelKV;
+
+  constructor(kv: import("@vercel/kv").VercelKV) {
+    this.kv = kv;
+  }
+
+  async create(session: Session): Promise<Session> {
+    await this.kv.set(`session:${session.id}`, session, { ex: SESSION_TTL_SEC });
+    return session;
+  }
+
+  async get(id: string): Promise<Session | undefined> {
+    const val = await this.kv.get<Session>(`session:${id}`);
+    return val ?? undefined;
+  }
+
+  async update(id: string, patch: Partial<Session>): Promise<Session | undefined> {
+    const current = await this.get(id);
+    if (!current) return undefined;
+    const next: Session = { ...current, ...patch, updatedAt: new Date().toISOString() };
+    await this.kv.set(`session:${id}`, next, { ex: SESSION_TTL_SEC });
+    return next;
+  }
+
+  async list(): Promise<Session[]> {
+    return [];
+  }
 }
 
-export const sessionStore: SessionStore =
-  globalThis.__coldtapStore ?? (globalThis.__coldtapStore = new InMemoryStore());
+// ── Store singleton ───────────────────────────────────────────────────────────
+
+function createStore(): SessionStore {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    // Lazy import so the package is only resolved when the env vars are present.
+    // This keeps local dev working without installing KV creds.
+    const { kv } = require("@vercel/kv") as typeof import("@vercel/kv");
+    return new KvStore(kv);
+  }
+
+  // Fallback: in-memory with globalThis so Next.js hot-reload doesn't wipe state.
+  return (globalThis.__coldtapStore as InMemoryStore | undefined) ?? (globalThis.__coldtapStore = new InMemoryStore());
+}
+
+export const sessionStore: SessionStore = createStore();
 
 export const ACTIVE_STATUSES: ReadonlySet<SessionStatus> = new Set([
   "CREATED",

@@ -14,6 +14,7 @@
     "@coldtap/shared": "*",
     "@ledgerhq/hw-app-xrp": "^6.37.0",
     "@ledgerhq/hw-transport-web-ble": "^6.34.0",
+    "@vercel/kv": "^3.0.0",
     "nanoid": "^5.0.7",
     "next": "^15.0.3",
     "qrcode": "^1.5.4",
