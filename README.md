@@ -11,12 +11,13 @@ A merchant creates a checkout session on the web. A buyer scans a QR on their iP
 
 ## Launch paths
 
-The iPhone enters the checkout flow via one of two mechanisms. Both end at the same place — `GET /api/sessions/:id` followed by `POST /prepare` and `POST /submit-signed`. The backend contract does not care how the iPhone learned the session id.
+The buyer enters the checkout flow via one of three mechanisms. All three converge on the same backend contract — `POST /prepare` → sign → `POST /submit-signed`. The backend does not care how the buyer got to the session.
 
-1. **HTTPS QR (primary, always works).** Merchant session page encodes `https://<base>/s/<id>`. iPhone scans with the camera; a universal link opens the app. Manual session-id entry is available as a fallback on the same URL. This path is fully documented in `apps/ios/README.md` §3.
-2. **Android HCE NFC tap (spike, additive).** Merchant runs the tiny Android app in `apps/android/`, which emulates an NFC card target. The iPhone reads one short APDU (`SESSION:<id>`) and enters the same flow. See `apps/android/README.md` for the APDU contract, device requirements, and routing caveats.
+1. **iPhone native app (primary).** Merchant session page encodes `https://<base>/s/<id>`. iPhone scans the QR with the camera; a universal link opens the native ColdTap app, which bridges to a Ledger Nano X over CoreBluetooth and signs. Fully documented in `apps/ios/README.md`.
+2. **Android browser + WebBluetooth (backup, always works).** Any Android phone running Chrome can open `https://<base>/pay/<id>`, pair to a Ledger Nano X over Bluetooth directly from the browser, sign the XRPL transaction, and submit — no native app needed. This path lives inside `apps/web/` (see `apps/web/WEB_LEDGER.md` for the test plan). iOS Safari does not support WebBluetooth, so this path is Android-only.
+3. **Android HCE NFC tap (additive).** Merchant runs the tiny native Android app in `apps/android/`, which emulates an NFC card target. A buyer iPhone with Core NFC tap reads `SESSION:<id>` and enters path 1. See `apps/android/README.md` for the APDU contract. Nice-to-have; not on the demo critical path.
 
-The NFC path is additive and does not replace the QR path. If NFC misbehaves on demo day, the QR on the merchant screen is still live.
+If one path flakes on demo day, the others still settle the same session. The merchant dashboard (`/session/<id>`) shows live state regardless of which buyer client signs.
 
 ---
 
