@@ -1,0 +1,17 @@
+{
+  "name": "coldtap",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Self-custody in-person XRPL checkout. Tap to initiate, hardware-sign to pay.",
+  "workspaces": [
+    "apps/web",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "start": "npm run start -w apps/web",
+    "lint": "npm run lint -w apps/web",
+    "typecheck": "tsc -p apps/web --noEmit && tsc -p packages/shared --noEmit"
+  }
+}
