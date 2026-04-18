@@ -435,7 +435,7 @@
 					"-lc++",
 					"$(inherited)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.coldtap.app";
+				PRODUCT_BUNDLE_IDENTIFIER = com.coldtap.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ColdTap.app/ColdTap";
 			};
@@ -459,7 +459,7 @@
 					"-lc++",
 					"$(inherited)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.coldtap.app";
+				PRODUCT_BUNDLE_IDENTIFIER = com.coldtap.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ColdTap.app/ColdTap";
 			};
@@ -476,7 +476,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = WQ5XAXT53K;
 				ENABLE_BITCODE = NO;
-				PROVISIONING_PROFILE_SPECIFIER = "Cold Tap Dev";
 				INFOPLIST_FILE = ColdTap/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -488,8 +487,9 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.coldtap.app";
+				PRODUCT_BUNDLE_IDENTIFIER = com.coldtap.app;
 				PRODUCT_NAME = ColdTap;
+				PROVISIONING_PROFILE_SPECIFIER = "Cold Tap Dev";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -507,7 +507,6 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = WQ5XAXT53K;
 				INFOPLIST_FILE = ColdTap/Info.plist;
-				PROVISIONING_PROFILE_SPECIFIER = "Cold Tap Dev";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -518,8 +517,9 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "com.coldtap.app";
+				PRODUCT_BUNDLE_IDENTIFIER = com.coldtap.app;
 				PRODUCT_NAME = ColdTap;
+				PROVISIONING_PROFILE_SPECIFIER = "Cold Tap Dev";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};

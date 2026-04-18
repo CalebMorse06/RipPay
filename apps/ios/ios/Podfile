@@ -5,6 +5,7 @@ require Pod::Executable.execute_command('node', ['-p',
   )', __dir__]).strip
 
 platform :ios, '16.0'
+ENV['RCT_NEW_ARCH_ENABLED'] = '0'
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']

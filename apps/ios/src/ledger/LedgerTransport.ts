@@ -51,20 +51,24 @@ export function findFirstLedgerDevice(): Promise<LedgerDevice> {
       ));
     }, SCAN_TIMEOUT_MS);
 
+    console.log('[Ledger] BLE scan started');
     try {
       subscription = BleTransport.listen({
         next: (event: any) => {
           if (event.type === 'add' && event.descriptor) {
             const d = event.descriptor;
+            console.log(`[Ledger] Device found: ${d.name} (${d.id})`);
             finish({id: d.id, name: d.name ?? 'Ledger Nano X'}, null);
           }
         },
         error: (err: Error) => {
+          console.log('[Ledger] BLE scan error:', err?.message);
           finish(null, new Error(humanizeBleError(err)));
         },
         complete: () => {},
       });
     } catch (err: any) {
+      console.log('[Ledger] BLE listen threw:', err?.message);
       finish(null, new Error(humanizeBleError(err)));
     }
   });
@@ -75,10 +79,13 @@ export function findFirstLedgerDevice(): Promise<LedgerDevice> {
  * Returns the transport instance used by XrplSigner.
  */
 export async function openTransport(device: LedgerDevice): Promise<BleTransport> {
+  console.log(`[Ledger] Opening transport to ${device.name} (${device.id})`);
   try {
     const transport = await BleTransport.open(device.id, 10_000);
+    console.log('[Ledger] Transport open success');
     return transport;
   } catch (err: any) {
+    console.log('[Ledger] openTransport error:', err?.message);
     throw new Error(humanizeBleError(err));
   }
 }
@@ -104,6 +111,12 @@ function humanizeBleError(err: any): string {
     return 'Could not connect to Ledger. Try unlocking it and opening the XRP app.';
   if (msg.includes('LockedDevice') || msg.includes('locked'))
     return 'Ledger is locked. Please unlock it and open the XRP app.';
+  if (msg.includes('pairing') || msg.includes('Peer removed pairing') || msg.includes('PairingFailed'))
+    return 'Ledger pairing is stale. Go to iPhone Settings → Bluetooth, forget the Nano X, then try again.';
+  if (msg.includes('already connected') || msg.includes('device already'))
+    return 'Another app (Ledger Live?) is holding the Ledger connection. Close Ledger Live and try again.';
+  if (msg.includes('MTU'))
+    return 'Bluetooth signal too weak. Move closer to your Ledger and retry.';
 
   return msg || 'Bluetooth connection failed';
 }
