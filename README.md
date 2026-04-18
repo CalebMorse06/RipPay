@@ -19,6 +19,8 @@ The buyer enters the checkout flow via one of three mechanisms. All three conver
 
 If one path flakes on demo day, the others still settle the same session. The merchant dashboard (`/session/<id>`) shows live state regardless of which buyer client signs.
 
+For the full demo-day breakdown — what judges see, hardware matrix, per-flow pre-demo checklist, and on-stage recovery — see [`DEMO.md`](./DEMO.md).
+
 ---
 
 ## Architecture
