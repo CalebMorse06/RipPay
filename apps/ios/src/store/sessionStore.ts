@@ -1,22 +1,22 @@
 import {create} from 'zustand';
 import {Session} from '@coldtap/shared';
+import {releaseAll} from '../ledger/LedgerSession';
 import type {LedgerDevice} from '../ledger/LedgerTransport';
 
-/** Full buyer flow state — drives ProcessingScreen UI labels */
 export type BuyerStep =
   | 'idle'
-  | 'preparing_payment'     // POST /prepare to backend
-  | 'scanning_ledger'       // BLE scan for nearby Ledger
-  | 'connecting_ledger'     // BleTransport.open
-  | 'fetching_account'      // getXrplAddress
-  | 'building_tx'           // TransactionBuilder.encodeForSigning
-  | 'awaiting_confirmation' // user must press buttons on Ledger
-  | 'signing'               // signTransaction in progress (after user confirms)
-  | 'submitting'            // POST /submit-signed to backend
+  | 'preparing_payment'
+  | 'scanning_ledger'
+  | 'connecting_ledger'
+  | 'fetching_account'
+  | 'building_tx'
+  | 'awaiting_confirmation'
+  | 'signing'
+  | 'submitting'
   | 'done'
   | 'error';
 
-/** Legacy alias — kept so existing ProcessingScreen references compile */
+/** Legacy alias kept for backwards compatibility */
 export type LedgerStep = BuyerStep;
 
 interface SessionStore {
@@ -39,6 +39,7 @@ interface SessionStore {
   /** @deprecated use setBuyerError */
   setLedgerError: (err: string | null) => void;
 
+  /** Full reset — clears session, payment state, and releases prewarm transport */
   reset: () => void;
 }
 
@@ -49,19 +50,18 @@ export const useSessionStore = create<SessionStore>(set => ({
   connectedDevice: null,
 
   setSession: s => set({session: s}),
-  setBuyerStep: step =>
-    set({buyerStep: step, ledgerStep: step}),
-  setBuyerError: err =>
-    set({buyerError: err, ledgerError: err}),
+  setBuyerStep: step => set({buyerStep: step, ledgerStep: step}),
+  setBuyerError: err => set({buyerError: err, ledgerError: err}),
   setConnectedDevice: d => set({connectedDevice: d}),
 
-  // Legacy aliases kept for compatibility
+  // Legacy aliases
   ledgerStep: 'idle',
   ledgerError: null,
   setLedgerStep: step => set({buyerStep: step, ledgerStep: step}),
   setLedgerError: err => set({buyerError: err, ledgerError: err}),
 
-  reset: () =>
+  reset: () => {
+    releaseAll().catch(() => {}); // clean up pre-warmed transport if any
     set({
       session: null,
       buyerStep: 'idle',
@@ -69,5 +69,6 @@ export const useSessionStore = create<SessionStore>(set => ({
       buyerError: null,
       ledgerError: null,
       connectedDevice: null,
-    }),
+    });
+  },
 }));

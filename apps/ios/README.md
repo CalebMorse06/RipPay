@@ -4,37 +4,88 @@ Self-custody, in-person XRPL checkout. The buyer loads a payment session on thei
 
 ---
 
-## Demo Flow (Happy Path)
+## Launch Paths
 
-1. Merchant creates a session in the ColdTap web app
-2. Buyer opens ColdTap on iPhone
-3. Buyer enters session ID, pastes a link, or scans QR
-4. Checkout screen shows: merchant name, item, amount
-5. Buyer taps **Open Session** → sees Checkout
+There are three ways to start a checkout:
+
+| Method | How |
+|--------|-----|
+| **Tap Merchant Phone** | Tap button on HomeScreen → hold iPhone near Android merchant phone (NFC HCE) |
+| **NFC sticker / deep link** | Tap NFC sticker or open a `coldtap://merchant/:id` or `coldtap://session/:id` URL |
+| **Paste / manual entry** | Paste a session URL or type a session ID into HomeScreen |
+
+All three paths converge at `CheckoutScreen`. The Ledger + XRPL signing flow is identical regardless of entry method.
+
+---
+
+## Android Merchant Phone Tap Flow
+
+The merchant Android phone uses **Host Card Emulation (HCE)** to act as an ISO 7816 NFC card. The buyer iPhone acts as the ISO 7816 reader.
+
+### AID
+
+```
+F0434F4C44544150
+```
+
+- `F0` — proprietary prefix (ISO 7816-5)
+- `434F4C44544150` — ASCII "COLDTAP" (uppercase)
+
+### What the Android app must implement
+
+1. `HostApduService` with AID `F0434F4C44544150`
+2. On `SELECT AID` APDU (`00 A4 04 00 08 F0 43 4F 4C 44 54 41 50`), respond with:
+   - response data bytes (UTF-8 payload)
+   - status word `90 00`
+
+### Payload format
+
+| Format | Example | Routes to |
+|--------|---------|-----------|
+| `sessionId=<id>` | `sessionId=abc123` | `CheckoutScreen` directly |
+| `merchantSlug=<slug>` | `merchantSlug=hackku-booth` | `MerchantLanding` → resolve → `CheckoutScreen` |
+| bare string | `abc123` | Treated as session ID → `CheckoutScreen` |
+
+Prefer `sessionId=...` — it skips the merchant-resolution API round-trip.
+
+### iPhone reader behavior
+
+1. Buyer taps **"Tap Merchant Phone"** on HomeScreen
+2. iOS shows system NFC HUD: "Hold iPhone near reader…"
+3. iPhone sends `SELECT AID` APDU for `F0434F4C44544150`
+4. Android HCE responds with payload + `90 00`
+5. App decodes UTF-8, parses intent, navigates into checkout
+6. After ~20 s with no response: iOS times out with a human-readable error
+
+---
+
+## Demo Flow (Happy Path — Android HCE mode)
+
+1. Merchant opens ColdTap Android app → active session shown
+2. Buyer taps **"Tap Merchant Phone"** on iPhone HomeScreen
+3. iOS NFC HUD appears
+4. Buyer holds iPhone near merchant Android phone
+5. Session ID is received over NFC → Checkout screen opens
 6. Buyer taps **Approve with Ledger**
-7. App scans for Ledger Nano X over Bluetooth (XRP app must be open)
-8. App reads buyer's XRPL address + public key from Ledger
-9. App fetches unsigned transaction from backend (`POST /api/sessions/:id/prepare`)
-10. Transaction is displayed on Ledger for physical confirmation
-11. Buyer presses both buttons on Ledger to approve
-12. Signed blob is submitted to backend (`POST /api/sessions/:id/submit-signed`)
-13. Success screen shows transaction hash with XRPL Explorer link
-14. Merchant web app updates to **Paid**
+7. Ledger Nano X connects via Bluetooth, XRP address read
+8. Transaction displayed on Ledger for physical confirmation
+9. Buyer presses both buttons → signed blob submitted
+10. Success screen shows transaction hash
+11. Merchant dashboard flips to **Paid**
 
 ---
 
 ## Setup
 
 ```bash
-# 1. From monorepo root
-cd coldtap
+# From monorepo root
 npm install
 
-# 2. Install iOS pods
+# Install iOS pods
 cd apps/ios/ios
 pod install
 
-# 3. Configure environment
+# Configure environment
 cd ..
 cp .env.example .env
 # Edit .env — set BACKEND_URL
@@ -45,29 +96,18 @@ cp .env.example .env
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BACKEND_URL` | `http://localhost:3000` | ColdTap backend base URL |
-| `XRPL_NODE_URL` | `wss://s.altnet.rippletest.net:51233` | Not currently used by app (HTTP fallback used instead) |
-
-### Pointing at a remote backend (ngrok / tunnel)
-
-```
-BACKEND_URL=https://your-tunnel.ngrok.io
-```
-
-HTTP is allowed for local networks (`NSAllowsLocalNetworking: true`). For remote HTTPS tunnels, no additional config is needed.
+| `XRPL_NODE_URL` | `wss://s.altnet.rippletest.net:51233` | Not actively used (HTTP fallback used) |
 
 ---
 
-## Run on Physical iPhone
+## Run on Physical Device
+
+**Simulator will not work** — BLE (Ledger) and NFC both require physical hardware.
 
 ```bash
-# Connect iPhone via USB, trust this Mac in iOS prompt
-
 cd apps/ios
 npx react-native run-ios --device "Your iPhone Name"
-
-# Or open Xcode directly:
-open ios/ColdTap.xcworkspace
-# Select your device → Run (Cmd+R)
+# or: open ios/ColdTap.xcworkspace → select device → Cmd+R
 ```
 
 > Always use `ColdTap.xcworkspace` (not `.xcodeproj`) after pod install.
@@ -77,150 +117,112 @@ open ios/ColdTap.xcworkspace
 ## Ledger Nano X Setup
 
 1. Unlock Ledger Nano X with PIN
-2. Open the **XRP app** on the Ledger (`Settings → Apps → XRP → Open`)
+2. Open the **XRP app** on the Ledger
 3. Screen should show "Use wallet to view accounts"
-4. Pair Ledger to iPhone via Bluetooth (first time only — go to iPhone Settings → Bluetooth)
+4. Pair via Bluetooth (first time: iPhone Settings → Bluetooth)
 5. Keep XRP app open during the full approval flow
 
-**Derivation path:** `44'/144'/0'/0/0` (BIP44 standard for XRP, same as Ledger Live)
+**Derivation path:** `44'/144'/0'/0/0` (BIP44 XRP, same as Ledger Live)
 
 ---
 
-## iOS Permissions Required
+## iOS Permissions & Configuration
 
-| Permission | Info.plist key | Why |
+| Permission | Key | Why |
 |---|---|---|
 | Bluetooth | `NSBluetoothAlwaysUsageDescription` | Ledger BLE connection |
-| Bluetooth (legacy) | `NSBluetoothPeripheralUsageDescription` | Required for iOS < 13 compat |
-| Camera | `NSCameraUsageDescription` | QR code scanning |
-| NFC | `NFCReaderUsageDescription` | NFC session load (Phase 4) |
+| Bluetooth (legacy) | `NSBluetoothPeripheralUsageDescription` | iOS < 13 compat |
+| Camera | `NSCameraUsageDescription` | Reserved for QR (future) |
+| NFC | `NFCReaderUsageDescription` | NFC reader sessions |
 | Background BLE | `UIBackgroundModes: bluetooth-central` | Keep BLE alive during signing |
 
-NFC entitlement requires paid Apple Developer account with NFC Tag Reading capability.
-NFC does **not** work in Simulator.
-BLE does **not** work in Simulator.
+### NFC entitlements (both NDEF and ISO7816 declared)
+
+`ColdTap.entitlements`:
+```xml
+<key>com.apple.developer.nfc.readersession.formats</key>
+<array>
+  <string>NDEF</string>
+  <string>ISO7816</string>
+</array>
+```
+
+`Info.plist` (AID filter — iOS uses this to match compatible tags):
+```xml
+<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+<array>
+  <string>F0434F4C44544150</string>
+</array>
+```
+
+---
+
+## Known Blockers
+
+1. **Provisioning profile must include ISO7816**  
+   Adding `ISO7816` to entitlements requires a matching Apple Developer provisioning profile with the NFC Tag Reading + ISO7816 capability. Without it the entitlement is stripped and tag reading fails.  
+   Fix: Apple Developer portal → App ID → NFC Tag Reading → regenerate profile → Xcode Signing & Capabilities → re-download.
+
+2. **Physical device only** — `NFCTagReaderSession` does not run in the iOS Simulator.
+
+3. **Android HCE companion required** — The "Tap Merchant Phone" button does nothing without an Android app implementing HCE for AID `F0434F4C44544150`. The existing sticker / deep link launch path works independently.
 
 ---
 
 ## Deep Link / URL Handling
 
-The app handles:
-
 | Input | Example |
 |---|---|
 | Raw session ID | `abc123xyz` |
+| Raw merchant slug | `hackku-booth` → resolves via API |
 | ColdTap URL scheme | `coldtap://session/abc123xyz` |
+| ColdTap merchant scheme | `coldtap://merchant/my-booth` |
 | HTTPS path | `https://app.coldtap.xyz/session/abc123xyz` |
-| Clipboard paste | Any of the above, via Paste button |
 
-To test deep link from terminal:
+To test deep link:
 ```bash
-xcrun simctl openurl booted "coldtap://session/test-session-id"
-# (or on device via Safari address bar)
+# On simulator:
+xcrun simctl openurl booted "coldtap://session/test-id"
+# On device: open URL in Safari address bar
 ```
 
 ---
 
-## API Contract (Current Expectations)
+## API Contract
 
-### Always-available routes (Phase 1+):
+### Core routes:
 
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/api/sessions/:id` | Fetch session details |
 | `POST` | `/api/sessions/:id/status` | Update session status |
-| `POST` | `/api/sessions/:id/submit` | Submit signed blob (old route) |
-
-### Preferred routes (app uses these first, falls back to old routes):
-
-| Method | Route | Purpose |
-|---|---|---|
 | `POST` | `/api/sessions/:id/prepare` | Get unsigned tx from backend |
-| `POST` | `/api/sessions/:id/submit-signed` | Submit signed blob (new route) |
+| `POST` | `/api/sessions/:id/submit-signed` | Submit signed blob |
+| `GET` | `/api/merchants/:id/active-session` | Resolve merchant → session |
 
-### `/prepare` response shape:
-
-```json
-{
-  "sessionId": "abc123",
-  "unsignedTransaction": {
-    "TransactionType": "Payment",
-    "Destination": "rXXXXXXXX...",
-    "Amount": "1000000",
-    "Sequence": 12345,
-    "Fee": "12",
-    "LastLedgerSequence": 54321,
-    "Flags": 0
-  }
-}
-```
-
-**Backend controls:** Destination, Amount, Sequence, Fee, LastLedgerSequence, Memos, Flags  
-**iOS adds:** Account, SigningPubKey (from Ledger), TxnSignature (from signing)
-
-If `/prepare` returns 404/405, the app falls back to:
-- Building the unsigned transaction from the session's `destinationAddress` + `amountDrops`
-- Fetching Sequence/Fee/LastLedgerSequence from XRPL testnet JSON-RPC directly
-
-### `/submit-signed` request body:
-
-```json
-{ "signedTxBlob": "<hex-encoded signed transaction>" }
-```
-
-Response: `{ "txHash": "<transaction hash>" }`
+If `/prepare` returns 404/405, app builds unsigned tx client-side from session fields + XRPL testnet HTTP.  
+If `/submit-signed` returns 404/405, app falls back to `/submit`.
 
 ---
 
-## What Is Real vs Stubbed
+## Feature Status
 
 | Feature | Status |
 |---|---|
-| Session fetch (GET /sessions/:id) | Real |
-| Status update (POST /status) | Real |
-| Ledger BLE scan + connect | Real |
-| XRPL address/public key from Ledger | Real |
-| Transaction building (xrpl encode) | Real |
-| Transaction signing on Ledger | Real |
-| Signed blob submission | Real (tries /submit-signed, falls back to /submit) |
-| Backend /prepare endpoint | Real if available; client-side fallback if 404 |
-| XRPL network params fallback | Real (HTTP JSON-RPC to testnet) |
-| QR scanner | Stub (alert placeholder — Phase 2) |
-| NFC session load | Stub (alert placeholder — Phase 4) |
+| Checkout + Ledger BLE signing | Working |
+| XRPL transaction build + submit | Working |
+| Deep link launch (`coldtap://`) | Working |
+| NFC sticker → merchant resolution | Working |
+| Manual session ID / paste entry | Working |
+| Ledger prewarm (background BLE scan) | Working |
+| **Tap Merchant Phone (Android HCE)** | Code complete — requires physical device + ISO7816 provisioning profile + Android companion app |
+| QR scanner | Not implemented |
 
 ---
 
-## Expected Failure Modes
-
-| Situation | App behavior |
-|---|---|
-| Backend unreachable | Error on Checkout load or Processing; clear message shown |
-| Session expired | Checkout shows Expired state with message |
-| Ledger not found in 15s | Processing error: "No Ledger found. Make sure BLE is on..." |
-| Ledger locked | Error: "Ledger is locked. Please unlock and open XRP app." |
-| XRP app not open | Error: "XRP app is not open on your Ledger." |
-| User rejects on Ledger | Error: "Transaction rejected on Ledger." |
-| Backend /prepare 404 | Silent fallback to client-side tx building + XRPL HTTP |
-| Backend /submit-signed 404 | Silent fallback to /submit |
-| XRPL network params fetch fails | Error surfaced in Processing screen |
-
----
-
-## Build Phases
-
-| Phase | Status | Description |
-|---|---|---|
-| 1 — Skeleton | Done | Screens, mocked flow, manual session entry |
-| 2 — Real pipeline | Done | Ledger BLE, signing, real submission, URL parsing |
-| 3 — QR scanning | TODO | react-native-vision-camera (package installed) |
-| 4 — NFC + polish | TODO | react-native-nfc-manager (package installed) |
-
----
-
-## Xcode / Build Notes
+## Xcode Notes
 
 - Use `ColdTap.xcworkspace` (not `.xcodeproj`)
 - If build fails with "Multiple commands produce Info.plist": Xcode → Build Settings → User Script Sandboxing → NO
-- BLE and NFC require physical iPhone (no Simulator)
-- NFC requires paid Apple Developer account with NFC capability in provisioning profile
 - Deployment target: iOS 16.0
+- NFC + BLE: physical iPhone required; paid Apple Developer account required for NFC

@@ -30,7 +30,9 @@ import {
   buildUnsignedTxFromSession,
 } from '../ledger/TransactionBuilder';
 import {fetchNetworkParams} from '../ledger/xrplNetwork';
+import {consumePrewarm} from '../ledger/LedgerSession';
 import type {XrplUnsignedTransaction} from '@coldtap/shared';
+import {Colors, Typography, Radius} from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Processing'>;
 
@@ -110,25 +112,36 @@ export default function ProcessingScreen({navigation, route}: Props) {
         unsignedTx = preparePayload.unsignedTransaction;
       } catch (e) {
         if (e instanceof ApiError && e.code === 'PREPARE_NOT_IMPLEMENTED') {
-          // Fallback: build from session + fetch network params after we have address
-          unsignedTx = null; // will be built after Ledger connect
+          unsignedTx = null;
         } else {
           throw e;
         }
       }
 
-      // ── Step 3: Find Ledger via BLE scan ───────────────────────────────────
-      setBuyerStep('scanning_ledger');
-      const device = await findFirstLedgerDevice();
+      // ── Steps 3–5: Use pre-warmed transport if available ───────────────────
+      const prewarm = consumePrewarm();
+      let transport: any;
+      let address: string;
+      let publicKey: string;
 
-      // ── Step 4: Open BLE transport ─────────────────────────────────────────
-      setBuyerStep('connecting_ledger');
-      const transport = await openTransport(device);
-      transportRef.current = transport;
+      if (prewarm.transport && prewarm.account) {
+        // Fast path: CheckoutScreen already scanned, connected, and fetched account
+        transport = prewarm.transport;
+        address = prewarm.account.address;
+        publicKey = prewarm.account.publicKey;
+        transportRef.current = transport;
+      } else {
+        // Slow path: full BLE scan → connect → read account
+        setBuyerStep('scanning_ledger');
+        const device = await findFirstLedgerDevice();
 
-      // ── Step 5: Read buyer address + public key ────────────────────────────
-      setBuyerStep('fetching_account');
-      const {address, publicKey} = await getXrplAccount(transport);
+        setBuyerStep('connecting_ledger');
+        transport = await openTransport(device);
+        transportRef.current = transport;
+
+        setBuyerStep('fetching_account');
+        ({address, publicKey} = await getXrplAccount(transport));
+      }
 
       // ── Step 6: Build unsigned transaction (fallback path) ─────────────────
       setBuyerStep('building_tx');
@@ -242,13 +255,13 @@ function ProgressDot({step, current}: {step: BuyerStep; current: BuyerStep}) {
 }
 
 const dotStyles = StyleSheet.create({
-  dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#1F2937'},
-  completed: {backgroundColor: '#10B981'},
-  active: {backgroundColor: '#2563EB', width: 28, borderRadius: 4},
+  dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border},
+  completed: {backgroundColor: Colors.success},
+  active: {backgroundColor: Colors.primary, width: 28, borderRadius: 4},
 });
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#0A0A0F'},
+  container: {flex: 1, backgroundColor: Colors.background},
   content: {
     flex: 1,
     alignItems: 'center',
@@ -257,33 +270,41 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   iconArea: {marginBottom: 4, alignItems: 'center'},
-  errorIcon: {fontSize: 52, color: '#F87171'},
-  doneIcon: {fontSize: 52, color: '#10B981'},
-  ledgerIconBox: {alignItems: 'center', gap: 8},
-  ledgerIcon: {fontSize: 52, color: '#FFFFFF'},
+  errorIcon: {fontSize: 52, color: Colors.error},
+  doneIcon: {fontSize: 52, color: Colors.success},
+  ledgerIconBox: {
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  ledgerIcon: {fontSize: 44, color: Colors.textPrimary},
   ledgerIconLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#4B5563',
+    fontSize: Typography.xs,
+    fontWeight: Typography.bold,
+    color: Colors.textTertiary,
     letterSpacing: 2,
   },
   stepLabel: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: Typography.lg,
+    fontWeight: Typography.bold,
+    color: Colors.textPrimary,
     textAlign: 'center',
   },
   stepSubtext: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: 300,
   },
   errorSection: {gap: 14, alignItems: 'center', marginTop: 4},
   errorDetail: {
-    fontSize: 13,
-    color: '#F87171',
+    fontSize: Typography.sm,
+    color: Colors.error,
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: 300,
@@ -291,11 +312,11 @@ const styles = StyleSheet.create({
   retryButton: {
     paddingHorizontal: 28,
     paddingVertical: 13,
-    backgroundColor: '#111827',
-    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#374151',
+    borderColor: Colors.border,
   },
-  retryButtonText: {color: '#D1D5DB', fontSize: 15, fontWeight: '600'},
+  retryButtonText: {color: Colors.textSecondary, fontSize: Typography.base, fontWeight: Typography.semibold},
   progressDots: {flexDirection: 'row', gap: 8, marginTop: 36},
 });

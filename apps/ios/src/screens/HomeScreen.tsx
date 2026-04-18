@@ -7,101 +7,71 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
-  Linking,
   Clipboard,
+  ActivityIndicator,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
 import {useSessionStore} from '../store/sessionStore';
+import {parseLinkIntent} from '../utils/linkParser';
+import {readMerchantPayload, humanizeNFCError} from '../nfc/MerchantNFCReader';
+import {Colors, Typography, Radius, Shadow} from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
-/**
- * Parse a session ID from raw user input.
- * Accepts:
- *   - bare session ID (e.g. "abc123")
- *   - full URL with /session/<id> path (e.g. https://app.coldtap.xyz/session/abc123)
- *   - deep link (e.g. coldtap://session/abc123)
- *   - URL with ?id= or ?session= query param
- */
-export function parseSessionId(input: string): string | null {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  // Try URL parsing
-  try {
-    // Normalize: if it starts with coldtap:// make it parseable
-    const normalized = trimmed.startsWith('coldtap://')
-      ? trimmed.replace('coldtap://', 'https://coldtap.local/')
-      : trimmed;
-
-    const url = new URL(normalized);
-
-    // Path-based: /session/<id>
-    const parts = url.pathname.split('/').filter(Boolean);
-    const sessionIdx = parts.findIndex(p => p === 'session' || p === 'sessions');
-    if (sessionIdx >= 0 && parts[sessionIdx + 1]) {
-      return parts[sessionIdx + 1];
-    }
-
-    // Query param: ?id=<id> or ?session=<id> or ?sessionId=<id>
-    const qp = url.searchParams;
-    const qid = qp.get('id') ?? qp.get('session') ?? qp.get('sessionId');
-    if (qid) return qid;
-
-    // Last path segment fallback if no other match
-    if (parts.length === 1 && parts[0].length > 4) {
-      return parts[0];
-    }
-  } catch {}
-
-  // Not a URL — treat entire input as session ID
-  return trimmed;
-}
-
 export default function HomeScreen({navigation}: Props) {
-  const [input, setInput] = useState('');
+  const [devInput, setDevInput] = useState('');
+  const [devVisible, setDevVisible] = useState(false);
+  const [nfcScanning, setNfcScanning] = useState(false);
+  const [nfcError, setNfcError] = useState<string | null>(null);
   const reset = useSessionStore(s => s.reset);
 
-  // Reset payment state when returning to Home
   useEffect(() => {
     reset();
   }, [reset]);
 
-  // Handle incoming deep links while app is already open
-  useEffect(() => {
-    const sub = Linking.addEventListener('url', ({url}) => {
-      const id = parseSessionId(url);
-      if (id) {
-        setInput('');
-        navigation.navigate('Checkout', {sessionId: id});
+  async function handleTapMerchant() {
+    setNfcError(null);
+    setNfcScanning(true);
+    try {
+      const intent = await readMerchantPayload();
+      if (intent.type === 'unknown') {
+        throw new Error('Unrecognized payload — check Android app');
       }
-    });
-    return () => sub.remove();
-  }, [navigation]);
-
-  function handleLoad() {
-    const id = parseSessionId(input);
-    if (!id) {
-      Alert.alert(
-        'No session found',
-        'Paste a session ID or a ColdTap payment link.',
+      navigateFromInput(
+        intent.type === 'session'
+          ? `coldtap://session/${intent.sessionId}`
+          : `coldtap://merchant/${intent.merchantId}`,
       );
-      return;
+    } catch (e: any) {
+      setNfcError(humanizeNFCError(e?.message));
+    } finally {
+      setNfcScanning(false);
     }
-    navigation.navigate('Checkout', {sessionId: id});
+  }
+
+  function navigateFromInput(raw: string) {
+    const intent = parseLinkIntent(raw.trim());
+    if (intent.type === 'merchant') {
+      navigation.navigate('MerchantLanding', {merchantId: intent.merchantId});
+    } else if (intent.type === 'session') {
+      navigation.navigate('Checkout', {sessionId: intent.sessionId});
+    } else {
+      Alert.alert('Not recognized', 'Paste a session ID or ColdTap link.');
+    }
+  }
+
+  function handleDevLoad() {
+    if (!devInput.trim()) return;
+    navigateFromInput(devInput);
   }
 
   async function handlePaste() {
     try {
       const text = await Clipboard.getString();
       if (text?.trim()) {
-        setInput(text.trim());
-        const id = parseSessionId(text.trim());
-        if (id) {
-          navigation.navigate('Checkout', {sessionId: id});
-          return;
-        }
+        navigateFromInput(text.trim());
+        return;
       }
     } catch {}
     Alert.alert('Nothing to paste', 'Copy a session ID or payment link first.');
@@ -110,72 +80,87 @@ export default function HomeScreen({navigation}: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+
+        {/* Wordmark */}
         <View style={styles.hero}>
           <Text style={styles.logo}>ColdTap</Text>
-          <Text style={styles.tagline}>Self-custody XRPL checkout</Text>
+          <Text style={styles.tagline}>Secure XRPL payments</Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Session ID or Payment Link</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.input}
-              value={input}
-              onChangeText={setInput}
-              placeholder="Paste session ID or link"
-              placeholderTextColor="#4B5563"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="go"
-              onSubmitEditing={handleLoad}
-            />
-            <TouchableOpacity style={styles.pasteBtn} onPress={handlePaste}>
-              <Text style={styles.pasteBtnText}>Paste</Text>
-            </TouchableOpacity>
+        {/* NFC tap card */}
+        <TouchableOpacity
+          style={[styles.tapCard, nfcScanning && styles.tapCardActive]}
+          onPress={handleTapMerchant}
+          disabled={nfcScanning}
+          activeOpacity={0.85}>
+          <View style={styles.tapIconWrap}>
+            {nfcScanning
+              ? <ActivityIndicator size="small" color={Colors.primary} />
+              : <Text style={styles.tapIcon}>⬡</Text>
+            }
           </View>
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLoad}>
-            <Text style={styles.primaryButtonText}>Open Session →</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.tapTextWrap}>
+            <Text style={styles.tapHeading}>
+              {nfcScanning ? 'Hold near merchant phone…' : 'Tap to Pay'}
+            </Text>
+            <Text style={styles.tapBody}>
+              {nfcScanning
+                ? 'Keep your iPhone close until it connects'
+                : 'Hold your iPhone near the merchant phone'}
+            </Text>
+          </View>
+          {!nfcScanning && (
+            <Text style={styles.tapChevron}>›</Text>
+          )}
+        </TouchableOpacity>
 
+        {nfcError ? (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{nfcError}</Text>
+          </View>
+        ) : null}
+
+        {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>or</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        <View style={styles.altActions}>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() =>
-              Alert.alert(
-                'QR Scanner',
-                'Point at the merchant QR code to load the session.',
-                [{text: 'OK'}],
-              )
-            }>
-            <Text style={styles.secondaryIcon}>▦</Text>
-            <View style={styles.secondaryTextBox}>
-              <Text style={styles.secondaryButtonText}>Scan QR Code</Text>
-              <Text style={styles.secondaryButtonSub}>Tap QR on merchant screen</Text>
+        {/* Paste */}
+        <TouchableOpacity style={styles.secondaryButton} onPress={handlePaste}>
+          <Text style={styles.secondaryButtonText}>Paste payment link</Text>
+        </TouchableOpacity>
+
+        {/* Manual entry toggle */}
+        <TouchableOpacity
+          style={styles.devToggle}
+          onPress={() => setDevVisible(v => !v)}>
+          <Text style={styles.devToggleText}>
+            {devVisible ? 'Hide manual entry' : 'Enter session ID'}
+          </Text>
+        </TouchableOpacity>
+
+        {devVisible && (
+          <View style={styles.devSection}>
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={devInput}
+                onChangeText={setDevInput}
+                placeholder="Session ID or link"
+                placeholderTextColor={Colors.textTertiary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={handleDevLoad}
+              />
+              <TouchableOpacity style={styles.goButton} onPress={handleDevLoad}>
+                <Text style={styles.goButtonText}>Go</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() =>
-              Alert.alert(
-                'NFC',
-                'NFC tap support is coming. Use QR or manual entry for now.',
-                [{text: 'OK'}],
-              )
-            }>
-            <Text style={styles.secondaryIcon}>⬡</Text>
-            <View style={styles.secondaryTextBox}>
-              <Text style={styles.secondaryButtonText}>Tap NFC</Text>
-              <Text style={styles.secondaryButtonSub}>Hold phone near merchant terminal</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -186,77 +171,128 @@ export default function HomeScreen({navigation}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#0A0A0F'},
-  content: {flex: 1, paddingHorizontal: 24, justifyContent: 'center'},
-  hero: {alignItems: 'center', marginBottom: 44},
+  container: {flex: 1, backgroundColor: Colors.background},
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    gap: 14,
+  },
+  hero: {alignItems: 'center', marginBottom: 8},
   logo: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontSize: Typography.xxl,
+    fontWeight: Typography.heavy,
+    color: Colors.textPrimary,
     letterSpacing: -1,
   },
-  tagline: {fontSize: 15, color: '#6B7280', marginTop: 6},
-  section: {gap: 12},
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6B7280',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+  tagline: {
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
+    marginTop: 4,
   },
-  inputRow: {flexDirection: 'row', gap: 8},
-  input: {
-    flex: 1,
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: '#FFFFFF',
-    fontFamily: 'Courier',
+  tapCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    gap: 14,
+    ...Shadow.card,
   },
-  pasteBtn: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+  tapCardActive: {
+    borderColor: Colors.primaryDark,
+    backgroundColor: '#DAF0FF',
+  },
+  tapIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  pasteBtnText: {fontSize: 14, color: '#9CA3AF', fontWeight: '600'},
-  primaryButton: {
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
+  tapIcon: {fontSize: 20, color: '#FFFFFF'},
+  tapTextWrap: {flex: 1},
+  tapHeading: {
+    fontSize: Typography.base,
+    fontWeight: Typography.bold,
+    color: Colors.primaryDark,
   },
-  primaryButtonText: {fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
+  tapBody: {
+    fontSize: Typography.xs,
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  tapChevron: {
+    fontSize: 22,
+    color: Colors.primary,
+    fontWeight: Typography.regular,
+  },
+  errorBanner: {
+    backgroundColor: Colors.errorLight,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorBannerText: {
+    fontSize: Typography.sm,
+    color: Colors.error,
+  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
-    gap: 12,
+    gap: 10,
+    marginVertical: 2,
   },
-  dividerLine: {flex: 1, height: 1, backgroundColor: '#1F2937'},
-  dividerText: {fontSize: 13, color: '#374151'},
-  altActions: {gap: 10},
+  dividerLine: {flex: 1, height: 1, backgroundColor: Colors.border},
+  dividerText: {fontSize: Typography.sm, color: Colors.textTertiary},
   secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0D1117',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#1F2937',
-    borderRadius: 12,
-    paddingHorizontal: 18,
+    borderColor: Colors.border,
     paddingVertical: 14,
-    gap: 14,
+    alignItems: 'center',
   },
-  secondaryIcon: {fontSize: 22, color: '#374151'},
-  secondaryTextBox: {flex: 1},
-  secondaryButtonText: {fontSize: 15, color: '#6B7280', fontWeight: '500'},
-  secondaryButtonSub: {fontSize: 12, color: '#374151', marginTop: 2},
+  secondaryButtonText: {
+    fontSize: Typography.base,
+    fontWeight: Typography.semibold,
+    color: Colors.textSecondary,
+  },
+  devToggle: {alignItems: 'center', paddingVertical: 2},
+  devToggleText: {
+    fontSize: Typography.sm,
+    color: Colors.textTertiary,
+  },
+  devSection: {gap: 10},
+  inputRow: {flexDirection: 'row', gap: 8},
+  input: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: Typography.sm,
+    color: Colors.textPrimary,
+  },
+  goButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+  },
+  goButtonText: {
+    fontSize: Typography.base,
+    fontWeight: Typography.bold,
+    color: Colors.textOnPrimary,
+  },
   footer: {paddingBottom: 24, alignItems: 'center'},
-  footerText: {fontSize: 12, color: '#1F2937'},
+  footerText: {fontSize: Typography.xs, color: Colors.textTertiary},
 });

@@ -13,6 +13,22 @@ const config = {
     ],
     // xrpl 3.x ships ESM; disable package exports to force CJS resolution
     unstable_enablePackageExports: false,
+    // @ledgerhq/devices uses package exports to map ./ble/* → ./lib/ble/*.
+    // With exports disabled we must redirect manually.
+    resolveRequest: (context, moduleName, platform) => {
+      if (moduleName.startsWith('@ledgerhq/devices/')) {
+        const sub = moduleName.slice('@ledgerhq/devices/'.length);
+        return {
+          filePath: path.resolve(
+            workspaceRoot,
+            'node_modules/@ledgerhq/devices/lib',
+            sub + '.js',
+          ),
+          type: 'sourceFile',
+        };
+      }
+      return context.resolveRequest(context, moduleName, platform);
+    },
   },
 };
 

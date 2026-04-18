@@ -5,6 +5,7 @@ import {CommonActions} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/types';
 import TxHashLink from '../components/TxHashLink';
 import {useSessionStore} from '../store/sessionStore';
+import {Colors, Typography, Radius, Shadow} from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Success'>;
 
@@ -36,10 +37,8 @@ export default function SuccessScreen({navigation, route}: Props) {
           <TxHashLink txHash={txHash} />
         </View>
 
-        <View style={styles.ledgerConfirm}>
-          <Text style={styles.ledgerConfirmText}>
-            Signed and approved by your Ledger Nano X
-          </Text>
+        <View style={styles.ledgerBadge}>
+          <Text style={styles.ledgerBadgeText}>🔒 Signed by Ledger Nano X</Text>
         </View>
       </View>
 
@@ -53,49 +52,83 @@ export default function SuccessScreen({navigation, route}: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {flex: 1, backgroundColor: '#0A0A0F'},
-  content: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 20},
-  checkCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#052E16',
-    borderWidth: 2,
-    borderColor: '#10B981',
+  container: {flex: 1, backgroundColor: Colors.background},
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    paddingHorizontal: 32,
+    gap: 18,
   },
-  checkmark: {fontSize: 44, color: '#10B981'},
-  title: {fontSize: 32, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5},
-  subtitle: {fontSize: 16, color: '#6B7280', textAlign: 'center', lineHeight: 24},
+  checkCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.successLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  checkmark: {fontSize: 48, color: Colors.success},
+  title: {
+    fontSize: Typography.xxl,
+    fontWeight: Typography.heavy,
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
   txCard: {
-    backgroundColor: '#111827',
-    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
     padding: 16,
     width: '100%',
-    gap: 4,
-  },
-  txLabel: {fontSize: 12, fontWeight: '600', color: '#4B5563', letterSpacing: 1, textTransform: 'uppercase'},
-  ledgerConfirm: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    gap: 6,
     borderWidth: 1,
-    borderColor: '#1E3A5F',
+    borderColor: Colors.border,
+    ...Shadow.card,
   },
-  ledgerConfirmText: {fontSize: 13, color: '#60A5FA'},
-  footer: {paddingHorizontal: 24, paddingBottom: 16},
+  txLabel: {
+    fontSize: Typography.xs,
+    fontWeight: Typography.semibold,
+    color: Colors.textTertiary,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  ledgerBadge: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.full,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  ledgerBadgeText: {
+    fontSize: Typography.sm,
+    color: Colors.primaryDark,
+    fontWeight: Typography.medium,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 12,
+  },
   homeButton: {
-    backgroundColor: '#111827',
-    borderRadius: 14,
-    paddingVertical: 18,
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    paddingVertical: 17,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1F2937',
+    ...Shadow.button,
   },
-  homeButtonText: {fontSize: 17, fontWeight: '600', color: '#D1D5DB'},
+  homeButtonText: {
+    fontSize: Typography.md,
+    fontWeight: Typography.bold,
+    color: Colors.textOnPrimary,
+  },
 });

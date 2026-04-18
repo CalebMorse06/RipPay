@@ -1,5 +1,6 @@
 import React from 'react';
 import {Text, StyleSheet} from 'react-native';
+import {Colors, Typography} from '../theme';
 
 interface Props {
   amountDisplay: string;
@@ -18,13 +19,13 @@ export default function AmountDisplay({amountDisplay, currency}: Props) {
 const styles = StyleSheet.create({
   amount: {
     fontSize: 48,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: Typography.heavy,
+    color: Colors.textPrimary,
     letterSpacing: -1,
   },
   currency: {
-    fontSize: 28,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontSize: 26,
+    fontWeight: Typography.medium,
+    color: Colors.textSecondary,
   },
 });
