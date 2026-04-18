@@ -1,60 +1,96 @@
 /**
- * XRPL transaction construction and signature injection.
+ * XRPL transaction construction for the Ledger signing flow.
  *
- * Uses xrpl.js for canonical serialization.
- * The encoded hex is passed directly to the Ledger for signing.
+ * Flow:
+ *   1. Backend provides unsignedTransaction (destination, amount, sequence, fee, etc.)
+ *   2. iOS injects Account + SigningPubKey from Ledger
+ *   3. encode(tx) → hex for Ledger to sign
+ *   4. Ledger returns DER signature hex
+ *   5. Inject TxnSignature + re-encode → signed blob for submission
  *
- * Phase 3: Uncomment xrpl imports once dependencies are installed.
+ * Backend controls: Destination, Amount, Sequence, Fee, LastLedgerSequence, Memos
+ * iOS controls: Account, SigningPubKey, TxnSignature
+ *
+ * Uses encode/decode from xrpl package (re-exports ripple-binary-codec).
+ * If xrpl import fails, use: import { encode, decode } from 'ripple-binary-codec'
  */
 
-// import { encode, decode } from 'xrpl';
+import {encode, decode} from 'xrpl';
+import {XrplUnsignedTransaction} from '@coldtap/shared';
 
-export interface PaymentTxParams {
-  fromAddress: string;
-  toAddress: string;
+/** Build the signing hex: complete raw tx (without TxnSignature) encoded to hex */
+export function encodeForSigning(
+  unsignedTx: XrplUnsignedTransaction,
+  buyerAddress: string,
+  buyerPublicKey: string,
+): string {
+  const tx: Record<string, unknown> = {
+    ...unsignedTx,
+    Account: buyerAddress,
+    SigningPubKey: buyerPublicKey.toUpperCase(),
+    // Flags default: tfFullyCanonicalSig is deprecated in rippled 1.7+, don't set
+  };
+
+  // Defensive: remove any leftover signature fields
+  delete tx.TxnSignature;
+
+  const hex = encode(tx as any);
+  __DEV__ && console.log('[TransactionBuilder] encodeForSigning:', JSON.stringify(tx, null, 2));
+  return hex;
+}
+
+/** Inject signature into the transaction and encode final signed blob for submission */
+export function buildSignedBlob(
+  unsignedTx: XrplUnsignedTransaction,
+  buyerAddress: string,
+  buyerPublicKey: string,
+  signatureHex: string,
+): string {
+  const signedTx: Record<string, unknown> = {
+    ...unsignedTx,
+    Account: buyerAddress,
+    SigningPubKey: buyerPublicKey.toUpperCase(),
+    TxnSignature: signatureHex.toUpperCase(),
+  };
+
+  const blob = encode(signedTx as any);
+  __DEV__ && console.log('[TransactionBuilder] buildSignedBlob txHash preview available after submission');
+  return blob;
+}
+
+/**
+ * Build a minimal unsigned transaction from session data.
+ * Used when backend /prepare endpoint is not yet available.
+ * Caller must provide networkParams from fetchNetworkParams().
+ */
+export function buildUnsignedTxFromSession(params: {
+  destinationAddress: string;
   amountDrops: string;
   memo?: string;
   sequence: number;
   fee: string;
   lastLedgerSequence: number;
-}
+}): XrplUnsignedTransaction {
+  const tx: XrplUnsignedTransaction = {
+    TransactionType: 'Payment',
+    Destination: params.destinationAddress,
+    Amount: params.amountDrops,
+    Sequence: params.sequence,
+    Fee: params.fee,
+    LastLedgerSequence: params.lastLedgerSequence,
+    Flags: 0,
+  };
 
-export function buildPaymentTxHex(params: PaymentTxParams): string {
-  // TODO Phase 3: Uncomment and use xrpl encode
-  // const tx: any = {
-  //   TransactionType: 'Payment',
-  //   Account: params.fromAddress,
-  //   Amount: params.amountDrops,
-  //   Destination: params.toAddress,
-  //   Sequence: params.sequence,
-  //   Fee: params.fee,
-  //   LastLedgerSequence: params.lastLedgerSequence,
-  //   SigningPubKey: '',
-  // };
-  // if (params.memo) {
-  //   tx.Memos = [{
-  //     Memo: {
-  //       MemoData: Buffer.from(params.memo, 'utf8').toString('hex').toUpperCase(),
-  //       MemoType: Buffer.from('text/plain', 'utf8').toString('hex').toUpperCase(),
-  //     },
-  //   }];
-  // }
-  // return encode(tx);
-  throw new Error('TransactionBuilder: xrpl.js not yet wired. See Phase 3.');
-}
+  if (params.memo) {
+    tx.Memos = [
+      {
+        Memo: {
+          MemoData: Buffer.from(params.memo, 'utf8').toString('hex').toUpperCase(),
+          MemoType: Buffer.from('text/plain', 'utf8').toString('hex').toUpperCase(),
+        },
+      },
+    ];
+  }
 
-export function injectSignature(
-  encodedTxHex: string,
-  signature: string,
-  publicKey: string,
-): string {
-  // TODO Phase 3: Uncomment
-  // const decoded = decode(encodedTxHex) as any;
-  // decoded.TxnSignature = signature.toUpperCase();
-  // decoded.SigningPubKey = publicKey.toUpperCase();
-  // return encode(decoded);
-  void encodedTxHex;
-  void signature;
-  void publicKey;
-  throw new Error('TransactionBuilder: xrpl.js not yet wired. See Phase 3.');
+  return tx;
 }

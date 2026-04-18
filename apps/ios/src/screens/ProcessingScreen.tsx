@@ -6,130 +6,236 @@ import {
   SafeAreaView,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
-import {useSessionStore, LedgerStep} from '../store/sessionStore';
-import {updateSessionStatus, submitSession} from '../api/sessions';
+import {useSessionStore, BuyerStep} from '../store/sessionStore';
+import {
+  getSession,
+  updateSessionStatus,
+  prepareSession,
+  submitSignedBlob,
+  extractApiErrorMessage,
+  ApiError,
+} from '../api/sessions';
+import {
+  findFirstLedgerDevice,
+  openTransport,
+  closeTransport,
+} from '../ledger/LedgerTransport';
+import {getXrplAccount, signXrplTransaction} from '../ledger/XrplSigner';
+import {
+  encodeForSigning,
+  buildSignedBlob,
+  buildUnsignedTxFromSession,
+} from '../ledger/TransactionBuilder';
+import {fetchNetworkParams} from '../ledger/xrplNetwork';
+import type {XrplUnsignedTransaction} from '@coldtap/shared';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Processing'>;
 
-const STEP_LABELS: Record<LedgerStep, string> = {
-  idle: 'Preparing…',
-  connecting: 'Connecting to Ledger…',
-  reading_address: 'Reading your XRPL account…',
+const STEP_LABELS: Record<BuyerStep, string> = {
+  idle: 'Starting…',
+  preparing_payment: 'Preparing payment…',
+  scanning_ledger: 'Looking for Ledger…',
+  connecting_ledger: 'Connecting to Ledger…',
+  fetching_account: 'Reading your XRPL account…',
   building_tx: 'Building transaction…',
-  awaiting_user_confirm: 'Confirm on your Ledger',
+  awaiting_confirmation: 'Confirm on your Ledger',
+  signing: 'Signing…',
   submitting: 'Submitting to XRPL…',
   done: 'Complete',
   error: 'Something went wrong',
 };
 
-const STEP_SUBTEXT: Partial<Record<LedgerStep, string>> = {
-  connecting: 'Make sure Bluetooth is on and the XRP app is open on your Ledger',
-  awaiting_user_confirm: 'Review and press both buttons on your Ledger Nano X to approve',
+const STEP_SUBTEXT: Partial<Record<BuyerStep, string>> = {
+  scanning_ledger: 'Make sure Bluetooth is on and the XRP app is open on your Ledger',
+  connecting_ledger: 'Opening secure channel to Ledger Nano X…',
+  awaiting_confirmation: 'Review the amount and destination on your Ledger,\nthen press both buttons to approve',
   submitting: 'Your signed transaction is being broadcast to the network',
 };
 
+// Steps shown in the progress dots
+const PROGRESS_STEPS: BuyerStep[] = [
+  'scanning_ledger',
+  'fetching_account',
+  'building_tx',
+  'awaiting_confirmation',
+  'submitting',
+];
+
+const STEP_ORDER: BuyerStep[] = [
+  'idle',
+  'preparing_payment',
+  'scanning_ledger',
+  'connecting_ledger',
+  'fetching_account',
+  'building_tx',
+  'awaiting_confirmation',
+  'signing',
+  'submitting',
+  'done',
+];
+
 export default function ProcessingScreen({navigation, route}: Props) {
   const {sessionId} = route.params;
-  const {ledgerStep, ledgerError, setLedgerStep, setLedgerError} = useSessionStore();
+  const {buyerStep, buyerError, setBuyerStep, setBuyerError, reset} =
+    useSessionStore();
   const ran = useRef(false);
+  const transportRef = useRef<any>(null);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
     runPaymentFlow();
+
+    return () => {
+      closeTransport(transportRef.current).catch(() => {});
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function runPaymentFlow() {
+    let unsignedTx: XrplUnsignedTransaction | null = null;
+
     try {
+      // ── Step 1: Mark session awaiting signature ────────────────────────────
+      setBuyerStep('preparing_payment');
       await updateSessionStatus(sessionId, 'AWAITING_SIGNATURE');
 
-      // TODO Phase 3: Replace this mock flow with real Ledger BLE signing
-      setLedgerStep('connecting');
-      await delay(1500);
+      // ── Step 2: Get unsigned transaction from backend ──────────────────────
+      let preparePayload: {unsignedTransaction: XrplUnsignedTransaction} | null = null;
+      try {
+        preparePayload = await prepareSession(sessionId);
+        unsignedTx = preparePayload.unsignedTransaction;
+      } catch (e) {
+        if (e instanceof ApiError && e.code === 'PREPARE_NOT_IMPLEMENTED') {
+          // Fallback: build from session + fetch network params after we have address
+          unsignedTx = null; // will be built after Ledger connect
+        } else {
+          throw e;
+        }
+      }
 
-      setLedgerStep('reading_address');
-      await delay(1200);
+      // ── Step 3: Find Ledger via BLE scan ───────────────────────────────────
+      setBuyerStep('scanning_ledger');
+      const device = await findFirstLedgerDevice();
 
-      setLedgerStep('building_tx');
-      await delay(800);
+      // ── Step 4: Open BLE transport ─────────────────────────────────────────
+      setBuyerStep('connecting_ledger');
+      const transport = await openTransport(device);
+      transportRef.current = transport;
 
-      setLedgerStep('awaiting_user_confirm');
-      await delay(2500); // Simulates user pressing Ledger button
+      // ── Step 5: Read buyer address + public key ────────────────────────────
+      setBuyerStep('fetching_account');
+      const {address, publicKey} = await getXrplAccount(transport);
 
-      setLedgerStep('submitting');
+      // ── Step 6: Build unsigned transaction (fallback path) ─────────────────
+      setBuyerStep('building_tx');
+      if (unsignedTx === null) {
+        // Backend /prepare not available — build client-side
+        const session = await getSession(sessionId);
+        const networkParams = await fetchNetworkParams(address);
+        unsignedTx = buildUnsignedTxFromSession({
+          destinationAddress: session.destinationAddress,
+          amountDrops: session.amountDrops,
+          memo: session.memo,
+          ...networkParams,
+        });
+      }
 
-      // TODO Phase 3: Pass real signedTxBlob from Ledger
-      const mockSignedBlob = 'MOCK_SIGNED_TX_BLOB_REPLACE_IN_PHASE_3';
-      const result = await submitSession(sessionId, mockSignedBlob);
+      const txHex = encodeForSigning(unsignedTx, address, publicKey);
 
-      setLedgerStep('done');
+      // ── Step 7: User approves on Ledger ────────────────────────────────────
+      setBuyerStep('awaiting_confirmation');
+      const signatureHex = await signXrplTransaction(transport, txHex);
+      setBuyerStep('signing'); // briefly, then submitting
+
+      // ── Step 8: Build final signed blob ───────────────────────────────────
+      const signedBlob = buildSignedBlob(unsignedTx, address, publicKey, signatureHex);
+
+      // ── Step 9: Submit to backend ──────────────────────────────────────────
+      setBuyerStep('submitting');
+      const result = await submitSignedBlob(sessionId, signedBlob);
+
+      // ── Done ───────────────────────────────────────────────────────────────
+      await closeTransport(transport);
+      transportRef.current = null;
+      setBuyerStep('done');
       navigation.replace('Success', {sessionId, txHash: result.txHash});
-    } catch (e: any) {
-      setLedgerStep('error');
-      setLedgerError(e?.response?.data?.message ?? e?.message ?? 'Unknown error');
+    } catch (e: unknown) {
+      await closeTransport(transportRef.current);
+      transportRef.current = null;
+      setBuyerStep('error');
+      setBuyerError(extractApiErrorMessage(e));
     }
   }
 
-  const label = STEP_LABELS[ledgerStep];
-  const subtext = STEP_SUBTEXT[ledgerStep];
+  function handleRetry() {
+    reset();
+    navigation.goBack();
+  }
+
+  const label = STEP_LABELS[buyerStep];
+  const subtext = STEP_SUBTEXT[buyerStep];
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.iconArea}>
-          {ledgerStep === 'error' ? (
-            <Text style={styles.errorIcon}>✗</Text>
-          ) : ledgerStep === 'awaiting_user_confirm' ? (
-            <Text style={styles.ledgerIcon}>🔐</Text>
+          {buyerStep === 'error' ? (
+            <Text style={styles.errorIcon}>✕</Text>
+          ) : buyerStep === 'awaiting_confirmation' ? (
+            <View style={styles.ledgerIconBox}>
+              <Text style={styles.ledgerIcon}>▣</Text>
+              <Text style={styles.ledgerIconLabel}>LEDGER NANO X</Text>
+            </View>
+          ) : buyerStep === 'done' ? (
+            <Text style={styles.doneIcon}>✓</Text>
           ) : (
             <ActivityIndicator size="large" color="#2563EB" />
           )}
         </View>
 
         <Text style={styles.stepLabel}>{label}</Text>
-        {subtext && <Text style={styles.stepSubtext}>{subtext}</Text>}
 
-        {ledgerStep === 'error' && (
+        {subtext ? (
+          <Text style={styles.stepSubtext}>{subtext}</Text>
+        ) : null}
+
+        {buyerStep === 'error' && (
           <View style={styles.errorSection}>
-            {ledgerError && <Text style={styles.errorDetail}>{ledgerError}</Text>}
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => navigation.goBack()}>
-              <Text style={styles.retryButtonText}>Go Back</Text>
+            {buyerError ? (
+              <Text style={styles.errorDetail}>{buyerError}</Text>
+            ) : null}
+            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <Text style={styles.retryButtonText}>Go Back & Retry</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        <View style={styles.steps}>
-          {(['connecting', 'reading_address', 'building_tx', 'awaiting_user_confirm', 'submitting'] as LedgerStep[]).map(
-            step => (
-              <StepDot key={step} step={step} current={ledgerStep} />
-            ),
-          )}
+        <View style={styles.progressDots}>
+          {PROGRESS_STEPS.map(step => (
+            <ProgressDot key={step} step={step} current={buyerStep} />
+          ))}
         </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function StepDot({step, current}: {step: LedgerStep; current: LedgerStep}) {
-  const ORDER: LedgerStep[] = ['connecting', 'reading_address', 'building_tx', 'awaiting_user_confirm', 'submitting', 'done'];
-  const stepIdx = ORDER.indexOf(step);
-  const currentIdx = ORDER.indexOf(current);
-  const done = currentIdx > stepIdx;
-  const active = current === step;
+function ProgressDot({step, current}: {step: BuyerStep; current: BuyerStep}) {
+  const currentIdx = STEP_ORDER.indexOf(current);
+  const stepIdx = STEP_ORDER.indexOf(step);
+  const isCompleted = currentIdx > stepIdx && current !== 'error';
+  const isActive = current === step || (step === 'awaiting_confirmation' && current === 'signing');
 
   return (
     <View
       style={[
         dotStyles.dot,
-        done && dotStyles.done,
-        active && dotStyles.active,
+        isCompleted && dotStyles.completed,
+        isActive && dotStyles.active,
       ]}
     />
   );
@@ -137,25 +243,59 @@ function StepDot({step, current}: {step: LedgerStep; current: LedgerStep}) {
 
 const dotStyles = StyleSheet.create({
   dot: {width: 8, height: 8, borderRadius: 4, backgroundColor: '#1F2937'},
-  done: {backgroundColor: '#10B981'},
-  active: {backgroundColor: '#2563EB', width: 24},
+  completed: {backgroundColor: '#10B981'},
+  active: {backgroundColor: '#2563EB', width: 28, borderRadius: 4},
 });
 
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#0A0A0F'},
-  content: {flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 16},
-  iconArea: {marginBottom: 8},
-  errorIcon: {fontSize: 56, color: '#F87171'},
-  ledgerIcon: {fontSize: 56},
-  stepLabel: {fontSize: 22, fontWeight: '700', color: '#FFFFFF', textAlign: 'center'},
-  stepSubtext: {fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22, maxWidth: 280},
-  errorSection: {gap: 12, alignItems: 'center', marginTop: 8},
-  errorDetail: {fontSize: 13, color: '#F87171', textAlign: 'center'},
-  retryButton: {paddingHorizontal: 24, paddingVertical: 12, backgroundColor: '#111827', borderRadius: 10},
-  retryButtonText: {color: '#9CA3AF', fontSize: 15, fontWeight: '600'},
-  steps: {flexDirection: 'row', gap: 8, marginTop: 32},
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 18,
+  },
+  iconArea: {marginBottom: 4, alignItems: 'center'},
+  errorIcon: {fontSize: 52, color: '#F87171'},
+  doneIcon: {fontSize: 52, color: '#10B981'},
+  ledgerIconBox: {alignItems: 'center', gap: 8},
+  ledgerIcon: {fontSize: 52, color: '#FFFFFF'},
+  ledgerIconLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4B5563',
+    letterSpacing: 2,
+  },
+  stepLabel: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  stepSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 300,
+  },
+  errorSection: {gap: 14, alignItems: 'center', marginTop: 4},
+  errorDetail: {
+    fontSize: 13,
+    color: '#F87171',
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 300,
+  },
+  retryButton: {
+    paddingHorizontal: 28,
+    paddingVertical: 13,
+    backgroundColor: '#111827',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  retryButtonText: {color: '#D1D5DB', fontSize: 15, fontWeight: '600'},
+  progressDots: {flexDirection: 'row', gap: 8, marginTop: 36},
 });
-
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}

@@ -1,30 +1,109 @@
 /**
- * Phase 3: Replace stub with real BLE transport.
+ * BLE transport lifecycle for Ledger Nano X.
  *
- * Real implementation will:
- *   import BleTransport from '@ledgerhq/react-native-hw-transport-ble';
- *   const transport = await BleTransport.create(deviceId);
+ * Uses @ledgerhq/react-native-hw-transport-ble which wraps react-native-ble-plx.
  *
- * Requirements:
- *   - react-native-ble-plx linked
+ * iOS requirements:
  *   - NSBluetoothAlwaysUsageDescription in Info.plist
  *   - bluetooth-central in UIBackgroundModes
+ *   - Physical device only (BLE does not work in Simulator)
+ *
+ * Ledger requirements:
+ *   - Ledger Nano X must be unlocked
+ *   - XRP app must be open on the device
  */
+
+import BleTransport from '@ledgerhq/react-native-hw-transport-ble';
 
 export interface LedgerDevice {
   id: string;
   name: string;
 }
 
-export async function scanForDevices(
-  onDevice: (device: LedgerDevice) => void,
-  timeoutMs = 10000,
-): Promise<void> {
-  // TODO Phase 3: BleTransport.listen(observer) to discover nearby Ledger devices
-  throw new Error('LedgerTransport: BLE not yet implemented. See Phase 3.');
+/** Scan timeout for demo use — 15 seconds should be plenty */
+const SCAN_TIMEOUT_MS = 15_000;
+
+/**
+ * Find the first nearby Ledger device via BLE scan.
+ * Returns a promise that resolves on first device found, or rejects on timeout/error.
+ *
+ * Automatically cleans up the scan subscription.
+ */
+export function findFirstLedgerDevice(): Promise<LedgerDevice> {
+  return new Promise<LedgerDevice>((resolve, reject) => {
+    let finished = false;
+    let subscription: {unsubscribe: () => void} | null = null;
+
+    const finish = (device: LedgerDevice | null, err: Error | null) => {
+      if (finished) return;
+      finished = true;
+      try {
+        subscription?.unsubscribe();
+      } catch {}
+      clearTimeout(timer);
+      if (device) resolve(device);
+      else reject(err!);
+    };
+
+    const timer = setTimeout(() => {
+      finish(null, new Error(
+        'No Ledger found within 15 seconds.\n\nMake sure:\n• Bluetooth is on\n• Ledger is unlocked\n• XRP app is open on Ledger',
+      ));
+    }, SCAN_TIMEOUT_MS);
+
+    try {
+      subscription = BleTransport.listen({
+        next: (event: any) => {
+          if (event.type === 'add' && event.descriptor) {
+            const d = event.descriptor;
+            finish({id: d.id, name: d.name ?? 'Ledger Nano X'}, null);
+          }
+        },
+        error: (err: Error) => {
+          finish(null, new Error(humanizeBleError(err)));
+        },
+        complete: () => {},
+      });
+    } catch (err: any) {
+      finish(null, new Error(humanizeBleError(err)));
+    }
+  });
 }
 
-export async function createTransport(deviceId: string): Promise<unknown> {
-  // TODO Phase 3: return await BleTransport.create(deviceId);
-  throw new Error('LedgerTransport: BLE not yet implemented. See Phase 3.');
+/**
+ * Open a BLE transport connection to a Ledger device.
+ * Returns the transport instance used by XrplSigner.
+ */
+export async function openTransport(device: LedgerDevice): Promise<BleTransport> {
+  try {
+    const transport = await BleTransport.open(device.id, 10_000);
+    return transport;
+  } catch (err: any) {
+    throw new Error(humanizeBleError(err));
+  }
+}
+
+/** Disconnect cleanly. Safe to call multiple times. */
+export async function closeTransport(transport: BleTransport | null): Promise<void> {
+  if (!transport) return;
+  try {
+    await transport.close();
+  } catch {}
+}
+
+function humanizeBleError(err: any): string {
+  const msg: string = err?.message ?? String(err);
+
+  if (msg.includes('BluetoothUnauthorized') || msg.includes('unauthorized'))
+    return 'Bluetooth permission denied. Please enable Bluetooth access for ColdTap in Settings.';
+  if (msg.includes('BluetoothPoweredOff') || msg.includes('powered off'))
+    return 'Bluetooth is off. Please turn on Bluetooth and try again.';
+  if (msg.includes('DeviceDisconnected') || msg.includes('disconnected'))
+    return 'Ledger disconnected. Make sure the XRP app is open and try again.';
+  if (msg.includes('CantOpenDevice') || msg.includes('cannot open'))
+    return 'Could not connect to Ledger. Try unlocking it and opening the XRP app.';
+  if (msg.includes('LockedDevice') || msg.includes('locked'))
+    return 'Ledger is locked. Please unlock it and open the XRP app.';
+
+  return msg || 'Bluetooth connection failed';
 }
