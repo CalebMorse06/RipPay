@@ -1,5 +1,22 @@
-export function TxLink({ hash }: { hash: string }) {
-  const href = `https://testnet.xrpl.org/transactions/${hash}`;
+import type { NetworkId } from "@coldtap/shared";
+
+export function TxLink({
+  hash,
+  network = "testnet",
+}: {
+  hash: string;
+  network?: NetworkId;
+}) {
+  const href =
+    network === "mainnet"
+      ? `https://livenet.xrpl.org/transactions/${hash}`
+      : network === "testnet"
+        ? `https://testnet.xrpl.org/transactions/${hash}`
+        : undefined;
+
+  if (!href) {
+    return <span className="break-all font-mono text-xs text-subtle">{hash} · mock</span>;
+  }
   return (
     <a
       href={href}

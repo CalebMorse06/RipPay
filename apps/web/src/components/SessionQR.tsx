@@ -2,27 +2,33 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { buildSessionUri } from "@/lib/qr";
+import { buildLaunchUrl } from "@/lib/qr";
 
-export function SessionQR({ sessionId }: { sessionId: string }) {
+export function SessionQR({
+  sessionId,
+  baseUrl,
+}: {
+  sessionId: string;
+  baseUrl?: string;
+}) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
-  const [uri, setUri] = useState<string>("");
+  const [launchUrl, setLaunchUrl] = useState<string>("");
 
   useEffect(() => {
-    const apiBase =
-      typeof window !== "undefined" ? window.location.origin : "";
-    const payload = buildSessionUri(sessionId, apiBase);
-    setUri(payload);
+    const base =
+      baseUrl ?? (typeof window !== "undefined" ? window.location.origin : "");
+    const url = buildLaunchUrl(sessionId, base);
+    setLaunchUrl(url);
 
     let cancelled = false;
-    QRCode.toDataURL(payload, {
+    QRCode.toDataURL(url, {
       errorCorrectionLevel: "M",
       margin: 1,
       scale: 6,
       color: { dark: "#0b0f17", light: "#e6ebf4" },
     })
-      .then((url) => {
-        if (!cancelled) setDataUrl(url);
+      .then((u) => {
+        if (!cancelled) setDataUrl(u);
       })
       .catch(() => {
         if (!cancelled) setDataUrl(null);
@@ -31,7 +37,7 @@ export function SessionQR({ sessionId }: { sessionId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, baseUrl]);
 
   return (
     <div className="space-y-2">
@@ -40,16 +46,22 @@ export function SessionQR({ sessionId }: { sessionId: string }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={dataUrl}
-            alt={`QR code encoding ${uri}`}
+            alt={`QR code encoding ${launchUrl}`}
             className="h-full w-full rounded"
           />
         ) : (
           <div className="h-full w-full animate-pulse rounded bg-border" />
         )}
       </div>
-      <div className="truncate text-center font-mono text-[10px] text-subtle" title={uri}>
-        {uri || "…"}
-      </div>
+      <a
+        href={launchUrl}
+        target="_blank"
+        rel="noreferrer"
+        title={launchUrl}
+        className="block truncate text-center font-mono text-[10px] text-subtle hover:text-accent"
+      >
+        {launchUrl || "…"}
+      </a>
     </div>
   );
 }

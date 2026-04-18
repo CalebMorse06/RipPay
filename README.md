@@ -2,7 +2,7 @@
 
 **Self-custody, in-person XRPL checkout.** Tap to initiate. Hardware-sign to pay.
 
-A merchant creates a checkout session on the web. A buyer taps or scans a QR with their iPhone, reviews the payment, and approves it on a Ledger Nano X — the private key never leaves the hardware wallet. The backend submits the signed transaction to XRPL and the merchant sees live confirmation.
+A merchant creates a checkout session on the web. A buyer scans a QR on their iPhone, reviews the payment, and approves it on a Ledger Nano X — the private key never leaves the hardware wallet. The backend submits the signed transaction to XRPL and the merchant sees live confirmation.
 
 > **This is not** Apple Pay, phone-as-card, or a shallow blockchain demo.
 > **This is** session-based, hardware-signed, self-custody checkout over a real XRPL payment.
@@ -25,7 +25,7 @@ A merchant creates a checkout session on the web. A buyer taps or scans a QR wit
                                        └───────────┘
 ```
 
-**Rule:** the web app and the iPhone app never talk directly. They share state only via the backend, keyed by session ID.
+**Rule:** the web app and the iPhone app never talk directly. They share state only via the backend, keyed by session ID. The backend owns `Destination`, `Amount`, and `InvoiceID` — the client cannot invent them and a mismatched signed blob is rejected.
 
 ---
 
@@ -35,11 +35,11 @@ A merchant creates a checkout session on the web. A buyer taps or scans a QR wit
 coldtap/
 ├── apps/
 │   ├── web/                 Next.js 15 merchant app + API routes (backend)
+│   │   └── src/server/xrpl/ prepare · verify · submit
 │   └── ios/                 buyer app (separate agent)
 ├── packages/
 │   └── shared/              canonical Session types, zod schemas, examples
 ├── package.json             npm workspaces
-├── tsconfig.base.json
 └── README.md                you are here
 ```
 
@@ -50,32 +50,46 @@ coldtap/
 ```bash
 # from the repo root
 npm install
-npm run dev                  # starts the web app at http://localhost:3000
+cp apps/web/.env.example apps/web/.env.local    # optional — defaults run mock mode
+npm run dev                                     # http://localhost:3000
 ```
 
-### Environment
+### Modes
 
-Copy or set the following when you want to run against real XRPL:
+| Env | Behavior |
+|---|---|
+| `XRPL_MODE=mock` (default) | Full lifecycle simulated: `SUBMITTED → VALIDATING → PAID` in ~3s. No network I/O. The `/submit` endpoint also accepts test blobs that won't decode, so curl-driven demos keep working. |
+| `XRPL_MODE=real` + `XRPL_NETWORK=testnet` | Opens an `xrpl.Client` against testnet. `/prepare` autofills `Sequence` + `LastLedgerSequence` when the client sends `{account}`. `/submit-signed` decodes, verifies, submits, polls for validation, and classifies on `tesSUCCESS` vs. any other result. |
 
-| Variable | Default | Meaning |
+### Environment variables
+
+See [`apps/web/.env.example`](./apps/web/.env.example) for the full list with defaults.
+
+| Variable | Default | Purpose |
 |---|---|---|
-| `XRPL_MODE` | `mock` | `mock` simulates SUBMITTED→VALIDATING→PAID; `real` uses the XRPL SDK |
-| `XRPL_WS_URL` | `wss://s.altnet.rippletest.net:51233` | XRPL WebSocket endpoint (testnet by default) |
-| `NEXT_PUBLIC_BASE_URL` | inferred from `window.location.origin` | Used in the QR payload as `api=...` so the iOS app knows where to call |
+| `XRPL_MODE` | `mock` | `mock` or `real`. |
+| `XRPL_NETWORK` | `testnet` | `testnet` or `mainnet`. Ignored in mock. |
+| `XRPL_WS_URL` | network-derived | Override rippled WebSocket. |
+| `XRPL_DEFAULT_FEE_DROPS` | `12` | Fee suggested in `/prepare`. |
+| `XRPL_LEDGER_OFFSET` | `40` | Ledgers ahead to set `LastLedgerSequence`. |
+| `PUBLIC_BASE_URL` | from request | Canonical public URL for QR / universal links. |
+| `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` | Client-bundled fallback base URL. |
 
 ---
 
-## Canonical API contract
+## API contract
 
-All routes live under `apps/web/src/app/api/`. The shared types are in `packages/shared/src/session.ts`.
+All routes live under `apps/web/src/app/api/`. Types: [`packages/shared/src/session.ts`](./packages/shared/src/session.ts). Examples: [`packages/shared/src/examples.ts`](./packages/shared/src/examples.ts).
 
 | Method | Route | Purpose |
 |---|---|---|
-| `POST` | `/api/sessions` | Merchant creates a session. Body: `CreateSessionRequest`. Returns `Session` with status `AWAITING_BUYER`. |
-| `GET`  | `/api/sessions/:id` | Fetch current `Session`. Lazily transitions to `EXPIRED` when `expiresAt` has passed. |
-| `POST` | `/api/sessions/:id/submit` | Buyer (iOS) posts a signed XRPL tx blob. Returns `{txHash, status: "SUBMITTED"}`. Backend then drives `VALIDATING → PAID / FAILED`. |
-| `POST` | `/api/sessions/:id/status` | Manual status override. Used by iOS to advance `AWAITING_BUYER → AWAITING_SIGNATURE`, and by demo tooling. |
-| `GET`  | `/api/sessions/:id/events` | Server-Sent Events stream of `Session` snapshots on every change. Closes when a terminal state is reached. |
+| `POST` | `/api/sessions` | Merchant creates a session. Returns `Session` with `status=AWAITING_BUYER` and `network`. |
+| `GET`  | `/api/sessions/:id` | Fetch current `Session`. Lazily transitions to `EXPIRED` past `expiresAt`. |
+| `POST` | `/api/sessions/:id/prepare` | **Canonical integration path.** iOS posts `{account}`. Server returns a `PrepareSessionResponse` containing a canonical unsigned `Payment` with `Destination`, `Amount`, and `InvoiceID` fixed. Side effect: advances `AWAITING_BUYER → AWAITING_SIGNATURE`. |
+| `POST` | `/api/sessions/:id/submit-signed` | iOS posts `{txBlob}` (hex). Server decodes the blob, verifies it matches the session, computes the tx hash, records `SUBMITTED`, and kicks off validation tracking. Returns `{txHash, status: "SUBMITTED"}`. |
+| `POST` | `/api/sessions/:id/submit` | Legacy. In real mode it's a thin alias to `/submit-signed`. In mock mode it also accepts non-XRPL blobs so curl smoke tests keep working. |
+| `POST` | `/api/sessions/:id/status` | Admin / demo tool for manual transitions. Prefer `/prepare` + `/submit-signed` for the real flow. |
+| `GET`  | `/api/sessions/:id/events` | Server-Sent Events stream of `Session` snapshots on every change. Heartbeats every 15s. Closes when a terminal state is reached. |
 
 ### `SessionStatus`
 
@@ -86,27 +100,66 @@ CREATED · AWAITING_BUYER · AWAITING_SIGNATURE · SUBMITTED · VALIDATING · PA
 ### Transitions
 
 ```
-AWAITING_BUYER  ──(iOS: POST /status)───▶  AWAITING_SIGNATURE
-AWAITING_SIGN.  ──(iOS: POST /submit)──▶  SUBMITTED
-SUBMITTED       ──(backend: XRPL pool)─▶  VALIDATING
-VALIDATING      ──(backend: tesSUCCESS)▶  PAID
-VALIDATING      ──(backend: non-tes / timeout)──▶  FAILED
-any             ──(expiresAt passed)───▶  EXPIRED
+AWAITING_BUYER     ─(iOS: POST /prepare)──────▶  AWAITING_SIGNATURE
+AWAITING_SIGNATURE ─(iOS: POST /submit-signed)▶  SUBMITTED
+SUBMITTED          ─(backend: xrpl submit ok)─▶  VALIDATING
+VALIDATING         ─(backend: tesSUCCESS)─────▶  PAID
+VALIDATING         ─(backend: non-tes / timeout)▶ FAILED
+any                ─(expiresAt passed)────────▶  EXPIRED
 ```
 
-### Example payloads
+---
 
-See [`packages/shared/src/examples.ts`](./packages/shared/src/examples.ts) for a full set of copy-pasteable requests and responses.
+## Launch URL strategy
+
+The QR encodes an HTTPS URL so it works without any app registration:
+
+```
+https://<base>/s/<sessionId>
+```
+
+- **iPhone with the ColdTap app** — the associated-domain universal-link rule intercepts the URL and opens the native app directly with the session id.
+- **iPhone without the app, or any desktop browser** — the URL serves a lightweight buyer landing page (`apps/web/src/app/s/[id]/page.tsx`) that shows the checkout summary plus the raw session id for manual entry.
+
+The `coldtap://session/<id>?api=<base>` custom URL scheme is still exported by `apps/web/src/lib/qr.ts` for simulator testing and can be re-enabled if the iOS build prefers a custom scheme during development.
+
+---
+
+## Deployment
+
+This app is designed to deploy on Vercel without code changes.
+
+```bash
+# first time
+vercel link            # project root: coldtap/apps/web
+vercel env pull        # optional
+vercel --prod
+```
+
+Set these in the Vercel project env:
+
+```
+XRPL_MODE=real
+XRPL_NETWORK=testnet
+PUBLIC_BASE_URL=https://<your-vercel-domain>
+```
+
+Notes:
+
+- **SSE on Vercel.** `/api/sessions/:id/events` uses `runtime = "nodejs"` and emits a heartbeat every 15s. On the Hobby plan an individual function invocation is capped — if a session runs longer than the cap the connection will close and the client's polling fallback takes over. No code changes needed.
+- **In-memory store.** Sessions live in process memory. On Vercel different invocations may land on different instances. For the hackathon demo this is fine (sessions are short; usually a single instance warm). For production, implement the `SessionStore` interface in `apps/web/src/server/store.ts` against Redis / Postgres / KV.
+- **Custom domain.** Set `PUBLIC_BASE_URL` to your custom domain so the QR encodes it rather than the Vercel preview URL.
 
 ---
 
 ## Demo flow
 
-1. Open `http://localhost:3000`. Fill in merchant, item, amount, XRPL destination, (optional) memo. Submit.
-2. You land on `/session/<id>`. The QR encodes `coldtap://session/<id>?api=http://localhost:3000`. The raw session ID is printed beneath the QR for manual entry.
-3. The buyer (iPhone) scans the QR, or types the session ID. The iOS app fetches `/api/sessions/<id>`, shows the payment summary, and (on Approve) calls `POST /status` to advance to `AWAITING_SIGNATURE`.
-4. The buyer approves on the Ledger Nano X. The iOS app gets a signed blob and posts it to `POST /submit`.
-5. Backend records `SUBMITTED` with the tx hash, walks to `VALIDATING`, then `PAID` (or `FAILED`). The merchant page updates live through SSE (polling fallback).
+1. Open `http://localhost:3000`. Create a session (merchant, item, amount, r-address).
+2. You land on `/session/<id>`. The QR encodes `<base>/s/<id>`.
+3. The iPhone app opens the URL (universal link) or the buyer types the session id. iOS calls `POST /prepare` with its buyer account. Backend returns the canonical unsigned Payment.
+4. Buyer reviews, approves on Ledger Nano X. iOS posts `{txBlob}` to `/submit-signed`.
+5. Backend verifies the blob (Destination / Amount / InvoiceID all match), submits to XRPL, polls for validation.
+6. Merchant screen walks through `AWAITING_BUYER → AWAITING_SIGNATURE → SUBMITTED → VALIDATING → PAID` live.
 
 ---
 
@@ -114,25 +167,17 @@ See [`packages/shared/src/examples.ts`](./packages/shared/src/examples.ts) for a
 
 | Area | State |
 |---|---|
-| Session create / get | ✅ real, backed by in-memory store |
+| Session create / get | ✅ real, in-memory store |
 | Expiry → `EXPIRED` | ✅ lazy transition on read |
-| QR generation | ✅ real (`qrcode` npm package) |
-| SSE events + polling fallback | ✅ real |
+| QR generation | ✅ real (`qrcode` npm) |
+| SSE events + polling fallback | ✅ real, both transports wired |
 | Manual status transitions | ✅ real |
-| Submit endpoint | ✅ real — validates body, writes `SUBMITTED`, drives progression |
-| XRPL submission (`XRPL_MODE=real`) | ✅ implemented via `xrpl` SDK; tested by running against testnet |
-| XRPL submission (`XRPL_MODE=mock`, default) | ✅ simulated progression for demo reliability |
-| Persistence | ⚠️ in-memory only — resets on server restart. Intentional for hackathon; swap the `SessionStore` interface for SQLite/Postgres later. |
-| `/pay/[id]` Android buyer web | ❌ not built — optional, native iOS is the primary buyer path. |
-
----
-
-## XRPL integration notes / TODO
-
-- **Tx hash vs. signed blob.** The iOS app signs via Ledger and posts the resulting tx blob (hex). The backend derives the hash with `hashes.hashSignedTx` from the `xrpl` SDK, so both sides agree on the identifier before validation completes.
-- **Validation strategy.** Real mode polls the `tx` command every 2s up to a 60s deadline, checks `validated === true`, and classifies on `meta.TransactionResult`. Subscribing to the `transactions` stream for the destination address would be marginally more efficient — currently polling for simplicity. TODO.
-- **Failure classification.** `tes*/tec*/ter*` are provisionally accepted on submit. Final classification happens only from the validated ledger metadata. `tem*/tef*/tel*` at submit are treated as immediate `FAILED`.
-- **Fees and LastLedgerSequence.** Handled by the iOS/Ledger flow when constructing the tx. The backend does not currently re-check or rebuild the transaction.
+| Canonical unsigned tx from `/prepare` | ✅ real; autofills `Sequence` / `LastLedgerSequence` in real mode |
+| Signed-blob verification | ✅ real — decodes via `xrpl.decode` and checks Destination / Amount / InvoiceID |
+| XRPL submission (`XRPL_MODE=real`) | ✅ real — submit + validation polling + result classification |
+| XRPL submission (`XRPL_MODE=mock`) | ✅ simulated progression for demo reliability |
+| Persistence | ⚠️ in-memory only — resets on restart. Intentional for hackathon. Swap `SessionStore` for SQLite/Postgres later. |
+| `/pay/[id]` Android buyer web | ❌ not built — optional; native iOS is the primary buyer path. |
 
 ---
 
@@ -144,19 +189,10 @@ See [`packages/shared/src/examples.ts`](./packages/shared/src/examples.ts) for a
 | `npm run build` | Production build of the web app |
 | `npm run start` | Serve the production build |
 | `npm run typecheck` | Type-check both workspaces |
+| `npm test -w apps/web` | Run the vitest suite (verify helpers + routes) |
 
 ---
 
-## Design decisions
+## iOS agent
 
-- **Next.js App Router, co-located API routes.** Single deployable unit for demo simplicity; cleanly splittable later.
-- **In-memory store behind a `SessionStore` interface.** Demo-reliable, zero external dependencies; swap for SQLite/Postgres by implementing the same interface.
-- **Polling first, SSE additive.** Guarantees the iOS app can integrate without implementing SSE. SSE is a nice-to-have for the merchant screen.
-- **`coldtap://` custom URL scheme in the QR.** iOS app handles it natively; web fallback could be added via a universal link if needed.
-- **Testnet only.** Hardcoded WebSocket endpoint. Mainnet would require explicit configuration.
-
----
-
-## Working together
-
-If you are the iOS agent: read [`apps/ios/README.md`](./apps/ios/README.md) and [`packages/shared/src`](./packages/shared/src). Everything the backend expects is documented there. Do not invent new routes or statuses — the contract is frozen.
+Integration docs for the separate iOS / Ledger agent are in [`apps/ios/README.md`](./apps/ios/README.md). They describe exactly which routes to call, what the signed tx must contain, and what the backend will reject.
