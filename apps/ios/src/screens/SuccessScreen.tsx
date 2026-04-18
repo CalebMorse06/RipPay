@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,26 @@ import {RootStackParamList} from '../navigation/types';
 import TxHashLink from '../components/TxHashLink';
 import {useSessionStore} from '../store/sessionStore';
 import {Colors, Typography, Radius, Shadow} from '../theme';
+import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
+import Sound from 'react-native-sound';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Success'>;
 
 export default function SuccessScreen({navigation, route}: Props) {
   const {txHash, merchantName, itemName, amountDisplay} = route.params;
   const reset = useSessionStore(s => s.reset);
+
+  useEffect(() => {
+    ReactNativeHapticFeedback.trigger('notificationSuccess', {
+      enableVibrateFallback: true,
+      ignoreAndroidSystemSettings: false,
+    });
+    const chime = new Sound('payment_chime.wav', Sound.MAIN_BUNDLE, err => {
+      if (!err) {
+        setTimeout(() => chime.play(() => chime.release()), 50);
+      }
+    });
+  }, []);
 
   function handleHome() {
     reset();

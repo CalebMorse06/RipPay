@@ -11,6 +11,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import QRScannerModal from '../components/QRScannerModal';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {useFocusEffect} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/types';
@@ -27,6 +28,7 @@ export default function HomeScreen({navigation}: Props) {
   const [devVisible, setDevVisible] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const [nfcError, setNfcError] = useState<string | null>(null);
+  const [qrVisible, setQrVisible] = useState(false);
   const [history, setHistory] = useState<TxRecord[]>([]);
   const reset = useSessionStore(s => s.reset);
 
@@ -140,12 +142,25 @@ export default function HomeScreen({navigation}: Props) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryButton}
+            onPress={() => setQrVisible(true)}
+            activeOpacity={0.7}>
+            <Text style={styles.secondaryIcon}>▦</Text>
+            <Text style={styles.secondaryButtonText}>Scan QR</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
             onPress={() => setDevVisible(v => !v)}
             activeOpacity={0.7}>
             <Text style={styles.secondaryIcon}>#</Text>
             <Text style={styles.secondaryButtonText}>Enter ID</Text>
           </TouchableOpacity>
         </View>
+
+        <QRScannerModal
+          visible={qrVisible}
+          onScan={raw => { setQrVisible(false); navigateFromInput(raw); }}
+          onClose={() => setQrVisible(false)}
+        />
 
         {devVisible && (
           <View style={styles.inputRow}>
@@ -331,7 +346,7 @@ const styles = StyleSheet.create({
   },
   secondaryRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   secondaryButton: {
     flex: 1,
