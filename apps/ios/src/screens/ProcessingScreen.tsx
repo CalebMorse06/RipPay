@@ -31,7 +31,7 @@ import {
 } from '../ledger/TransactionBuilder';
 import {fetchNetworkParams} from '../ledger/xrplNetwork';
 import {consumePrewarm} from '../ledger/LedgerSession';
-import type {XrplUnsignedTransaction} from '@coldtap/shared';
+import type {XrplUnsignedTransaction, PrepareSessionResponse} from '@coldtap/shared';
 import {Colors, Typography, Radius} from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Processing'>;
@@ -106,10 +106,10 @@ export default function ProcessingScreen({navigation, route}: Props) {
       await updateSessionStatus(sessionId, 'AWAITING_SIGNATURE');
 
       // ── Step 2: Get unsigned transaction from backend ──────────────────────
-      let preparePayload: {unsignedTransaction: XrplUnsignedTransaction} | null = null;
+      let preparePayload: PrepareSessionResponse | null = null;
       try {
         preparePayload = await prepareSession(sessionId);
-        unsignedTx = preparePayload.unsignedTransaction;
+        unsignedTx = preparePayload.unsignedTx;
       } catch (e) {
         if (e instanceof ApiError && e.code === 'PREPARE_NOT_IMPLEMENTED') {
           unsignedTx = null;

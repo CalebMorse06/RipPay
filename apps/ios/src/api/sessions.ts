@@ -1,7 +1,7 @@
 import {
   Session,
   SessionStatus,
-  PreparePayloadResponse,
+  PrepareSessionResponse,
   SubmitSessionResponse,
 } from '@coldtap/shared';
 import client from './client';
@@ -29,9 +29,9 @@ export async function updateSessionStatus(
  */
 export async function prepareSession(
   id: string,
-): Promise<PreparePayloadResponse> {
+): Promise<PrepareSessionResponse> {
   try {
-    const res = await client.post<PreparePayloadResponse>(
+    const res = await client.post<PrepareSessionResponse>(
       `/api/sessions/${id}/prepare`,
     );
     return res.data;

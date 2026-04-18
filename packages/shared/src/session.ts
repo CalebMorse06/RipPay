@@ -45,8 +45,11 @@ export interface XrplUnsignedTransaction {
 
 export interface PreparePayloadResponse {
   sessionId: string;
-  unsignedTransaction: XrplUnsignedTransaction;
+  unsignedTx: XrplUnsignedTransaction;
 }
+
+/** Alias matching backend route response shape */
+export type PrepareSessionResponse = PreparePayloadResponse;
 
 export interface SubmitSessionRequest {
   signedTxBlob: string;
