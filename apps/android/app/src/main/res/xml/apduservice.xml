@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AID filter for ColdTap's HCE service.
+
+  AID      : F0434F4C44544150
+  Decoded  : "F0" (proprietary) + ASCII "COLDTAP" (8 bytes total)
+  Category : "other" — non-payment proprietary AID. Routes to our app when it
+             is either (a) the default Tap-and-pay app OR (b) foregrounded via
+             the Activity on screen. See apps/android/README.md §routing.
+
+  Do not change the AID without coordinating the update in apps/ios/README.md §9
+  and the iOS Core NFC `select-identifiers` entitlement.
+-->
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/service_description"
+    android:requireDeviceUnlock="false">
+    <aid-group
+        android:category="other"
+        android:description="@string/aid_group_description">
+        <aid-filter android:name="F0434F4C44544150" />
+    </aid-group>
+</host-apdu-service>
