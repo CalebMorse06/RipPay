@@ -4,6 +4,7 @@ import { CreateSessionSchema, type Session } from "@coldtap/shared";
 import { sessionStore } from "@/server/store";
 import { sessionEvents } from "@/server/events";
 import { formatXrp } from "@/lib/drops";
+import { getNetwork } from "@/server/config";
 
 const DEFAULT_EXPIRY_SEC = 600;
 
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
     destinationAddress: parsed.data.destinationAddress,
     memo: parsed.data.memo,
     status: "AWAITING_BUYER",
+    network: getNetwork(),
     expiresAt: new Date(now.getTime() + expiresInSec * 1000).toISOString(),
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),

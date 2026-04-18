@@ -16,7 +16,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     session.status !== "EXPIRED" &&
     new Date(session.expiresAt).getTime() < Date.now()
   ) {
-    const expired = sessionStore.update(id, { status: "EXPIRED" });
+    const expiredAt = new Date().toISOString();
+    const expired = sessionStore.update(id, { status: "EXPIRED", expiredAt });
     if (expired) {
       sessionEvents.emit(expired);
       return NextResponse.json(expired);
