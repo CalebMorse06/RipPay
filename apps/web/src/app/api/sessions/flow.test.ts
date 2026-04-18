@@ -79,7 +79,7 @@ describe("create + prepare + submit-signed flow", () => {
     expect(prepared.immutableFields).toContain("InvoiceID");
 
     // Session should now be AWAITING_SIGNATURE
-    const afterPrepare = sessionStore.get(session.id);
+    const afterPrepare = await sessionStore.get(session.id);
     expect(afterPrepare?.status).toBe("AWAITING_SIGNATURE");
 
     // Sign the returned unsigned tx
@@ -156,7 +156,7 @@ describe("create + prepare + submit-signed flow", () => {
     expect(res.status).toBe(422);
     const body = (await res.json()) as { error: string; reason: string };
     expect(body.reason).toMatch(/Amount mismatch/);
-    const stored = sessionStore.get(session.id);
+    const stored = await sessionStore.get(session.id);
     expect(stored?.status).toBe("AWAITING_SIGNATURE"); // not advanced
   });
 
@@ -181,7 +181,7 @@ describe("create + prepare + submit-signed flow", () => {
       mkCtx(session.id),
     );
     expect(res.status).toBe(410);
-    const stored = sessionStore.get(session.id);
+    const stored = await sessionStore.get(session.id);
     expect(stored?.status).toBe("EXPIRED");
   });
 });

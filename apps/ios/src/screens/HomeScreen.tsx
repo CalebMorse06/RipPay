@@ -34,7 +34,8 @@ export default function HomeScreen({navigation}: Props) {
 
   useEffect(() => {
     reset();
-  }, [reset]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reload history every time the screen comes into focus
   useFocusEffect(

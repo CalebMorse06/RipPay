@@ -80,7 +80,7 @@ export interface PreparePayloadResponse {
 export type PrepareSessionResponse = PreparePayloadResponse;
 
 export interface SubmitSessionRequest {
-  signedTxBlob: string;
+  txBlob: string;
 }
 
 export interface SubmitSessionResponse {

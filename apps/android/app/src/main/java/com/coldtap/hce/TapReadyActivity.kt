@@ -3,6 +3,7 @@ package com.coldtap.hce
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.util.Log
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -201,7 +202,8 @@ class TapReadyActivity : AppCompatActivity() {
                 if (session.status.isTerminal) return
             } catch (ce: CancellationException) {
                 throw ce
-            } catch (_: Throwable) {
+            } catch (t: Throwable) {
+                Log.w(TAG, "Session poll failed", t)
                 setLiveDotOk(false)
             }
             delay(POLL_INTERVAL_MS)
@@ -368,5 +370,6 @@ class TapReadyActivity : AppCompatActivity() {
         const val EXTRA_ITEM_NAME = "item_name"
         const val EXTRA_DESTINATION = "destination"
         private const val POLL_INTERVAL_MS = 1500L
+        private const val TAG = "TapReadyActivity"
     }
 }
