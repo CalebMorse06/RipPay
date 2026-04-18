@@ -22,9 +22,12 @@ export default async function SessionPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Checkout</h1>
-        <Link href="/" className="text-sm text-subtle hover:text-ink">
-          ← New session
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{session.merchantName}</h1>
+          <p className="mt-0.5 text-sm text-subtle">{session.itemName} · {session.amountDisplay} XRP</p>
+        </div>
+        <Link href="/" className="text-sm text-subtle hover:text-ink transition">
+          ← New checkout
         </Link>
       </div>
       <SessionLive initial={session} baseUrl={baseUrl} />

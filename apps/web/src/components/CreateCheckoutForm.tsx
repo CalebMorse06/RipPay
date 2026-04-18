@@ -4,30 +4,51 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { xrpToDrops } from "@/lib/drops";
 
+const DEMO_PRESET = {
+  merchantName: "Demo Cafe",
+  itemName: "Cold brew",
+  amount: "1",
+  destinationAddress: "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe",
+  memo: "",
+};
+
 export function CreateCheckoutForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [values, setValues] = useState({
+    merchantName: "",
+    itemName: "",
+    amount: "",
+    destinationAddress: "",
+    memo: "",
+  });
+
+  function fillDemo() {
+    setValues({ ...DEMO_PRESET });
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    const form = e.currentTarget;
-    const fd = new FormData(form);
 
     let amountDrops: string;
     try {
-      amountDrops = xrpToDrops(String(fd.get("amount") ?? ""));
+      amountDrops = xrpToDrops(values.amount);
     } catch {
       setError("Enter a valid positive XRP amount (e.g. 2.5)");
       return;
     }
 
     const payload = {
-      merchantName: String(fd.get("merchantName") ?? "").trim(),
-      itemName: String(fd.get("itemName") ?? "").trim(),
-      destinationAddress: String(fd.get("destinationAddress") ?? "").trim(),
-      memo: String(fd.get("memo") ?? "").trim() || undefined,
+      merchantName: values.merchantName.trim(),
+      itemName: values.itemName.trim(),
+      destinationAddress: values.destinationAddress.trim(),
+      memo: values.memo.trim() || undefined,
       amountDrops,
     };
 
@@ -54,15 +75,31 @@ export function CreateCheckoutForm() {
 
   return (
     <form onSubmit={onSubmit} className="grid gap-5">
-      <Field label="Merchant name" name="merchantName" placeholder="Demo Cafe" required />
-      <Field label="Item" name="itemName" placeholder="Cold brew" required />
+      <Field
+        label="Merchant name"
+        name="merchantName"
+        placeholder="Demo Cafe"
+        required
+        value={values.merchantName}
+        onChange={handleChange}
+      />
+      <Field
+        label="Item"
+        name="itemName"
+        placeholder="Cold brew"
+        required
+        value={values.itemName}
+        onChange={handleChange}
+      />
       <Field
         label="Amount (XRP)"
         name="amount"
-        placeholder="2.5"
+        placeholder="1.00"
         required
         inputMode="decimal"
         pattern="^\d+(\.\d{1,6})?$"
+        value={values.amount}
+        onChange={handleChange}
       />
       <Field
         label="Destination XRPL address"
@@ -70,8 +107,16 @@ export function CreateCheckoutForm() {
         placeholder="rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe"
         required
         mono
+        value={values.destinationAddress}
+        onChange={handleChange}
       />
-      <Field label="Memo (optional)" name="memo" placeholder="order-1042" />
+      <Field
+        label="Memo (optional)"
+        name="memo"
+        placeholder="order-1042"
+        value={values.memo}
+        onChange={handleChange}
+      />
 
       {error && (
         <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -79,13 +124,23 @@ export function CreateCheckoutForm() {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-2 inline-flex h-14 items-center justify-center rounded-2xl bg-accent px-6 font-bold text-white transition hover:bg-accent-pressed disabled:opacity-50"
-      >
-        {submitting ? "Creating session…" : "Create checkout"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 inline-flex h-14 items-center justify-center rounded-2xl bg-accent px-6 font-bold text-white transition hover:bg-accent-pressed disabled:opacity-50"
+        >
+          {submitting ? "Creating…" : "Create checkout"}
+        </button>
+        <button
+          type="button"
+          onClick={fillDemo}
+          className="h-14 rounded-2xl border border-border bg-surface px-4 text-sm font-semibold text-subtle transition hover:border-accent hover:text-accent"
+          title="Fill demo values"
+        >
+          Demo
+        </button>
+      </div>
     </form>
   );
 }
@@ -98,6 +153,8 @@ function Field({
   inputMode,
   pattern,
   mono,
+  value,
+  onChange,
 }: {
   label: string;
   name: string;
@@ -106,16 +163,22 @@ function Field({
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   pattern?: string;
   mono?: boolean;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+        {label}
+      </span>
       <input
         name={name}
         placeholder={placeholder}
         required={required}
         inputMode={inputMode}
         pattern={pattern}
+        value={value}
+        onChange={onChange}
         className={`rounded-xl border border-border bg-bg px-4 py-3 text-ink outline-none transition placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/20 ${
           mono ? "font-mono text-sm" : ""
         }`}
