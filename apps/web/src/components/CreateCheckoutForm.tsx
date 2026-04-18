@@ -74,7 +74,7 @@ export function CreateCheckoutForm() {
       <Field label="Memo (optional)" name="memo" placeholder="order-1042" />
 
       {error && (
-        <p className="rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+        <p className="rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       )}
@@ -82,9 +82,9 @@ export function CreateCheckoutForm() {
       <button
         type="submit"
         disabled={submitting}
-        className="mt-2 inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 font-medium text-bg transition hover:brightness-110 disabled:opacity-60"
+        className="mt-2 inline-flex h-14 items-center justify-center rounded-2xl bg-accent px-6 font-bold text-white transition hover:bg-accent-pressed disabled:opacity-50"
       >
-        {submitting ? "Creating session…" : "Create checkout session"}
+        {submitting ? "Creating session…" : "Create checkout"}
       </button>
     </form>
   );
@@ -109,14 +109,14 @@ function Field({
 }) {
   return (
     <label className="grid gap-1.5">
-      <span className="text-xs uppercase tracking-widest text-subtle">{label}</span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">{label}</span>
       <input
         name={name}
         placeholder={placeholder}
         required={required}
         inputMode={inputMode}
         pattern={pattern}
-        className={`rounded-md border border-border bg-surface px-3 py-2 text-ink outline-none transition focus:border-accent focus:ring-1 focus:ring-accent ${
+        className={`rounded-xl border border-border bg-bg px-4 py-3 text-ink outline-none transition placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/20 ${
           mono ? "font-mono text-sm" : ""
         }`}
       />

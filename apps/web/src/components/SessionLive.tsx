@@ -107,19 +107,19 @@ export function SessionLive({
           </span>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface/60 p-6">
+        <div className="rounded-2xl border border-border bg-surface p-6">
           <div className="flex items-baseline justify-between gap-4">
             <div>
-              <div className="text-xs uppercase tracking-widest text-subtle">Merchant</div>
-              <div className="text-lg font-medium">{session.merchantName}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">Merchant</div>
+              <div className="text-lg font-semibold">{session.merchantName}</div>
             </div>
             <div className="text-right">
-              <div className="text-xs uppercase tracking-widest text-subtle">Amount</div>
-              <div className="text-2xl font-semibold tracking-tight">{session.amountDisplay}</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">Amount</div>
+              <div className="text-3xl font-bold tracking-tight">{session.amountDisplay}</div>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 border-t border-border pt-4 text-sm">
+          <div className="mt-5 grid gap-3 border-t border-border pt-4 text-sm">
             <KV label="Item" value={session.itemName} />
             <KV label="Destination" value={session.destinationAddress} mono />
             {session.memo && <KV label="Memo" value={session.memo} />}
@@ -131,8 +131,8 @@ export function SessionLive({
           </div>
 
           {session.txHash && (
-            <div className="mt-5 rounded-md border border-border bg-bg/60 p-3 text-sm">
-              <div className="mb-1 text-xs uppercase tracking-widest text-subtle">
+            <div className="mt-5 rounded-xl border border-border bg-bg p-4 text-sm">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
                 Transaction
               </div>
               <TxLink hash={session.txHash} network={session.network} />
@@ -140,27 +140,27 @@ export function SessionLive({
           )}
 
           {session.status === "FAILED" && session.failureReason && (
-            <div className="mt-5 rounded-md border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
-              <div className="mb-1 text-xs uppercase tracking-widest">Failure reason</div>
+            <div className="mt-5 rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em]">Failure reason</div>
               <div className="break-all font-mono text-xs">{session.failureReason}</div>
             </div>
           )}
           {session.status === "PAID" && (
-            <div className="mt-5 rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success">
+            <div className="mt-5 rounded-xl border border-success/30 bg-success-dim p-4 text-sm font-semibold text-success">
               Payment received · thanks
             </div>
           )}
           {session.status === "EXPIRED" && (
-            <div className="mt-5 rounded-md border border-border bg-bg/40 p-3 text-sm text-subtle">
+            <div className="mt-5 rounded-xl border border-border bg-surface-2 p-4 text-sm text-subtle">
               Session expired without payment. Create a new one to retry.
             </div>
           )}
         </div>
 
-        <div className="rounded-xl border border-dashed border-border/80 bg-surface/30 p-4 text-xs text-subtle">
+        <div className="rounded-2xl border border-dashed border-border bg-surface p-5 text-xs text-subtle">
           <strong className="font-semibold text-ink">Demo tip.</strong> Drive the session from another
           terminal:
-          <pre className="mt-2 overflow-x-auto rounded bg-bg/70 p-3 font-mono text-[11px] leading-relaxed text-ink/90">
+          <pre className="mt-2 overflow-x-auto rounded-xl bg-bg p-4 font-mono text-[11px] leading-relaxed text-ink">
 {`curl -X POST ${baseUrl}/api/sessions/${session.id}/status \\
   -H 'content-type: application/json' \\
   -d '{"status":"AWAITING_SIGNATURE"}'`}
@@ -169,17 +169,17 @@ export function SessionLive({
       </section>
 
       <aside className="space-y-4">
-        <div className="rounded-xl border border-border bg-surface/60 p-5">
-          <div className="mb-3 text-xs uppercase tracking-widest text-subtle">Buyer scans</div>
+        <div className="rounded-2xl border border-border bg-surface p-5">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">Buyer scans</div>
           <SessionQR sessionId={session.id} baseUrl={baseUrl} />
           <button
             onClick={copyId}
-            className="mt-3 w-full rounded-md border border-border bg-bg/60 px-3 py-2 text-xs font-mono text-ink transition hover:border-accent/60"
+            className="mt-3 w-full rounded-xl border border-border bg-bg px-3 py-2 text-xs font-mono text-ink transition hover:border-accent hover:text-accent"
             type="button"
           >
             {copied ? "copied ✓" : `copy id · ${session.id}`}
           </button>
-          <p className="mt-2 text-center text-[11px] text-subtle">
+          <p className="mt-3 text-center text-[11px] text-subtle">
             Or open the ColdTap iPhone app and enter the id manually.
           </p>
         </div>
@@ -200,13 +200,13 @@ function KV({ label, value, mono }: { label: string; value: string; mono?: boole
 function NetworkBadge({ network }: { network: NetworkId }) {
   const style =
     network === "mainnet"
-      ? "border-success/40 text-success"
+      ? "border-success/40 bg-success-dim text-success"
       : network === "testnet"
-        ? "border-accent/40 text-accent"
-        : "border-subtle/40 text-subtle";
+        ? "border-accent/40 bg-accent-dim text-accent"
+        : "border-border bg-surface text-subtle";
   return (
     <span
-      className={`inline-flex items-center rounded-full border bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest ${style}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${style}`}
       title="XRPL network this session settles on"
     >
       {network}

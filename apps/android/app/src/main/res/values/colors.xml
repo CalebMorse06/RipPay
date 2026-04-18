@@ -1,6 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ready_green">#2ecc71</color>
-    <color name="not_ready_red">#ef4444</color>
-    <color name="subtle">#8a93a6</color>
+    <!-- ColdTap palette — light-first, one ripple-blue accent.
+         Dark variants are kept at the bottom and used only by the Receipt screen. -->
+
+    <!-- Light surfaces -->
+    <color name="bg_primary">#FFFFFF</color>
+    <color name="bg_subtle">#F5F6F8</color>
+    <color name="bg_elevated">#FFFFFF</color>
+    <color name="bg_elevated_2">#F0F2F5</color>
+    <color name="divider">#E5E7EB</color>
+    <color name="border_subtle">#E5E7EB</color>
+
+    <!-- Light text -->
+    <color name="text_primary">#111418</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="text_tertiary">#9CA3AF</color>
+    <color name="text_on_accent">#FFFFFF</color>
+
+    <!-- Accent -->
+    <color name="accent">#0070E0</color>
+    <color name="accent_pressed">#0A5FBE</color>
+    <color name="accent_dim">#E0EEFD</color>
+    <color name="accent_ripple">#330070E0</color>
+
+    <!-- State -->
+    <color name="success">#10B981</color>
+    <color name="success_dim">#D1FAE5</color>
+    <color name="ready_green">#10B981</color>
+    <color name="not_ready_red">#EF4444</color>
+    <color name="danger">#EF4444</color>
+
+    <!-- Receipt dark palette (image #1) -->
+    <color name="receipt_bg">#0F1013</color>
+    <color name="receipt_card">#1A1C21</color>
+    <color name="receipt_row">#23262C</color>
+    <color name="receipt_text_primary">#FFFFFF</color>
+    <color name="receipt_text_secondary">#9CA3AF</color>
+    <color name="receipt_border">#2A2E35</color>
+
+    <!-- Legacy alias -->
+    <color name="subtle">#6B7280</color>
 </resources>

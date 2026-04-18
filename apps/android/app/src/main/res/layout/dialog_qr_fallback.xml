@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@color/bg_primary"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/qr_dialog_title"
+        android:textAppearance="@style/TextAppearance.ColdTap.Title"
+        android:layout_marginBottom="6dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/qr_dialog_subtitle"
+        android:textAppearance="@style/TextAppearance.ColdTap.Label"
+        android:layout_marginBottom="20dp" />
+
+    <ImageView
+        android:id="@+id/qrImage"
+        android:layout_width="260dp"
+        android:layout_height="260dp"
+        android:layout_gravity="center_horizontal"
+        android:contentDescription="@string/qr_dialog_title"
+        android:background="@color/bg_primary"
+        android:padding="8dp" />
+
+    <TextView
+        android:id="@+id/qrUrlText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginTop="12dp"
+        android:fontFamily="monospace"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:textIsSelectable="true"
+        android:maxLines="1"
+        android:ellipsize="middle" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/qrCloseButton"
+        style="@style/Widget.ColdTap.SecondaryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/qr_dialog_close" />
+
+</LinearLayout>

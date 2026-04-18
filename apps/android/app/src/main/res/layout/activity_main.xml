@@ -1,123 +1,161 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:background="@color/bg_primary">
 
+    <!-- Top bar: tabs on the left, settings icon on the right -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="4dp">
 
         <TextView
-            android:id="@+id/titleText"
-            android:layout_width="match_parent"
+            android:id="@+id/tabKeypad"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/title"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:text="@string/home_tab_keypad"
+            android:textAppearance="@style/TextAppearance.ColdTap.TabActive"
+            android:paddingVertical="4dp" />
 
         <TextView
-            android:layout_width="match_parent"
+            android:id="@+id/tabLibrary"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:text="@string/subtitle"
-            android:textColor="@color/subtle"
-            android:textSize="14sp"
-            android:letterSpacing="0.15" />
-
-        <!-- Status block -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#11000000"
-            android:padding="16dp"
-            android:layout_marginBottom="16dp">
-
-            <LinearLayout style="@style/KvRow">
-                <TextView style="@style/KvLabel" android:text="@string/label_nfc" />
-                <TextView android:id="@+id/nfcValue" style="@style/KvValue" />
-            </LinearLayout>
-
-            <LinearLayout style="@style/KvRow">
-                <TextView style="@style/KvLabel" android:text="@string/label_hce" />
-                <TextView android:id="@+id/hceValue" style="@style/KvValue" />
-            </LinearLayout>
-
-            <LinearLayout style="@style/KvRow">
-                <TextView style="@style/KvLabel" android:text="@string/label_payload" />
-                <TextView android:id="@+id/payloadValue" style="@style/KvValue" android:textIsSelectable="true" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/stateValue"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:padding="12dp"
-                android:text="@string/state_not_ready"
-                android:textColor="@color/not_ready_red"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Input -->
-        <EditText
-            android:id="@+id/sessionInput"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="@string/hint_session_id"
-            android:inputType="textNoSuggestions"
-            android:autofillHints=""
-            android:importantForAutofill="no"
-            android:maxLines="1"
-            android:fontFamily="monospace"
-            android:textSize="16sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/setButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/button_set" />
-
-            <Button
-                android:id="@+id/pasteButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="@string/button_paste"
-                style="?attr/materialButtonOutlinedStyle" />
-
-            <Button
-                android:id="@+id/clearButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:text="@string/button_clear"
-                style="?attr/materialButtonOutlinedStyle" />
-        </LinearLayout>
+            android:layout_marginStart="18dp"
+            android:text="@string/home_tab_library"
+            android:textAppearance="@style/TextAppearance.ColdTap.TabInactive"
+            android:paddingVertical="4dp" />
 
         <TextView
-            android:layout_width="match_parent"
+            android:id="@+id/tabFavourites"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
-            android:gravity="center"
-            android:lineSpacingExtra="4dp"
-            android:text="@string/footer"
-            android:textColor="@color/subtle"
-            android:textSize="12sp" />
+            android:layout_marginStart="18dp"
+            android:text="@string/home_tab_favourites"
+            android:textAppearance="@style/TextAppearance.ColdTap.TabInactive"
+            android:paddingVertical="4dp" />
 
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/settingsButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_settings"
+            android:src="@drawable/ic_settings"
+            app:tint="@color/text_primary" />
     </LinearLayout>
-</ScrollView>
+
+    <!-- Tab underline for Keypad -->
+    <View
+        android:id="@+id/tabUnderline"
+        android:layout_width="60dp"
+        android:layout_height="2dp"
+        android:layout_marginStart="20dp"
+        android:background="@color/text_primary" />
+
+    <!-- Amount hero -->
+    <TextView
+        android:id="@+id/amountText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:paddingHorizontal="20dp"
+        android:text="0"
+        android:textAppearance="@style/TextAppearance.ColdTap.AmountHero"
+        tools:text="£25.00" />
+
+    <!-- "+ Note" pill -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/noteButton"
+        style="@style/Widget.ColdTap.NoteButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="20dp"
+        android:text="@string/home_add_note" />
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Keypad grid (3x4). Uses a tinted container with 1dp gaps to draw
+         divider lines between white cells. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="360dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_keypad_grid">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/key1" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:layout_marginBottom="1dp" android:text="1" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key2" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:layout_marginBottom="1dp" android:text="2" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key3" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginBottom="1dp" android:text="3" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/key4" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:layout_marginBottom="1dp" android:text="4" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key5" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:layout_marginBottom="1dp" android:text="5" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key6" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginBottom="1dp" android:text="6" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/key7" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:layout_marginBottom="1dp" android:text="7" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key8" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:layout_marginBottom="1dp" android:text="8" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key9" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginBottom="1dp" android:text="9" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/keyClear" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:text="@string/key_clear" android:textColor="@color/accent" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/key0" style="@style/Widget.ColdTap.KeypadButton" android:layout_marginEnd="1dp" android:text="0" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/keyBack"
+                style="@style/Widget.ColdTap.KeypadButton"
+                android:contentDescription="@string/cd_backspace"
+                app:icon="@drawable/ic_backspace"
+                app:iconSize="28dp"
+                app:iconTint="@color/accent"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Charge CTA -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/createButton"
+        style="@style/Widget.ColdTap.PrimaryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="20dp"
+        android:enabled="false"
+        android:text="@string/home_charge_zero" />
+
+</LinearLayout>

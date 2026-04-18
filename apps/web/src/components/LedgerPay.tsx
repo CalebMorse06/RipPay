@@ -138,21 +138,23 @@ export function LedgerPay({ initial }: { initial: Session }) {
         <StatusBadge status={session.status} />
       </div>
 
-      <div className="rounded-xl border border-border bg-surface/60 p-5">
-        <div className="flex items-baseline justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-subtle">Merchant</div>
-            <div className="text-lg font-medium">{session.merchantName}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs uppercase tracking-widest text-subtle">Amount</div>
-            <div className="text-2xl font-semibold tracking-tight">{session.amountDisplay}</div>
-          </div>
+      <div className="rounded-2xl border border-border bg-surface p-6">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">You pay</div>
+        <div className="mt-1 text-5xl font-bold tracking-tight leading-none">
+          {session.amountDisplay}
         </div>
-        <div className="mt-2 text-sm text-subtle">{session.itemName}</div>
-        <div className="mt-3 flex items-center gap-2 text-[11px] uppercase tracking-widest text-subtle">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
-          <span>XRPL · {session.network}</span>
+        <div className="mt-3 flex items-baseline justify-between gap-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">Merchant</div>
+            <div className="text-base font-semibold">{session.merchantName}</div>
+            <div className="text-sm text-subtle">{session.itemName}</div>
+          </div>
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent-dim px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent"
+          >
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+            XRPL · {session.network}
+          </span>
         </div>
       </div>
 
@@ -181,9 +183,11 @@ export function LedgerPay({ initial }: { initial: Session }) {
         phase === "awaiting-validation") && (
         <div className="space-y-3">
           {account && (
-            <div className="rounded-lg border border-border bg-surface/60 p-3 text-xs">
-              <div className="text-subtle">Paying from</div>
-              <div className="break-all font-mono">{account.address}</div>
+            <div className="rounded-xl border border-border bg-surface p-4 text-xs">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+                Paying from
+              </div>
+              <div className="mt-1 break-all font-mono text-ink">{account.address}</div>
             </div>
           )}
 
@@ -222,8 +226,10 @@ export function LedgerPay({ initial }: { initial: Session }) {
       )}
 
       {txHash && (
-        <div className="rounded-lg border border-border bg-bg/60 p-3 text-sm">
-          <div className="mb-1 text-xs uppercase tracking-widest text-subtle">Transaction</div>
+        <div className="rounded-xl border border-border bg-surface p-4 text-sm">
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+            Transaction
+          </div>
           <TxLink hash={txHash} network={session.network} />
         </div>
       )}
@@ -249,11 +255,11 @@ function Button({
   variant?: "solid" | "outline";
 }) {
   const base =
-    "w-full rounded-md px-4 py-3 text-center font-medium transition active:translate-y-[1px]";
+    "flex h-14 w-full items-center justify-center rounded-2xl px-6 text-center font-bold transition active:translate-y-[1px]";
   const style =
     variant === "solid"
-      ? "bg-accent text-bg hover:brightness-110"
-      : "border border-border bg-surface text-ink hover:border-accent/60";
+      ? "bg-accent text-white hover:bg-accent-pressed"
+      : "border border-border bg-bg text-ink hover:border-accent hover:text-accent";
   return (
     <button type="button" onClick={onClick} className={`${base} ${style}`}>
       {children}
@@ -269,12 +275,12 @@ function Notice({
   children: React.ReactNode;
 }) {
   const styles: Record<typeof tone, string> = {
-    info: "border-accent/40 bg-accent/10 text-accent",
-    success: "border-success/40 bg-success/10 text-success",
-    warn: "border-warn/40 bg-warn/10 text-warn",
-    error: "border-danger/40 bg-danger/10 text-danger",
+    info: "border-accent/30 bg-accent-dim text-accent",
+    success: "border-success/30 bg-success-dim text-success",
+    warn: "border-warn/30 bg-warn/10 text-warn",
+    error: "border-danger/30 bg-danger/10 text-danger",
   };
   return (
-    <div className={`rounded-md border p-3 text-sm ${styles[tone]}`}>{children}</div>
+    <div className={`rounded-xl border p-4 text-sm font-medium ${styles[tone]}`}>{children}</div>
   );
 }

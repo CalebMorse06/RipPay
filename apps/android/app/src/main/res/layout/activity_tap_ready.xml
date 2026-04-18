@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_primary"
+    android:keepScreenOn="true"
+    android:padding="20dp">
+
+    <!-- Header: back / close + centered title + live-dot -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageButton
+            android:id="@+id/backButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_back"
+            android:src="@drawable/ic_back"
+            app:tint="@color/text_primary" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/tap_ready_title"
+            android:textAppearance="@style/TextAppearance.ColdTap.Title" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp">
+
+            <View
+                android:id="@+id/liveDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/bg_live_dot"
+                android:backgroundTint="@color/success" />
+
+            <TextView
+                android:id="@+id/liveLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/live_label_ok"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Tap target card (Square-style outlined rounded rect) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="24dp"
+        android:background="@drawable/bg_tap_target">
+
+        <!-- Wave icon (pulse-animated) -->
+        <ImageView
+            android:id="@+id/contactlessIcon"
+            android:layout_width="140dp"
+            android:layout_height="140dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_contactless" />
+
+        <!-- Spinner — shown for signing / validating -->
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/spinner"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/accent"
+            app:trackColor="@color/accent_dim"
+            app:trackThickness="6dp" />
+
+        <!-- Error glyph (FAILED / EXPIRED) -->
+        <ImageView
+            android:id="@+id/errorView"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_error"
+            android:visibility="gone"
+            android:contentDescription="@null" />
+
+        <!-- Hint text at bottom of the card -->
+        <TextView
+            android:id="@+id/cardHintText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:maxWidth="240dp"
+            android:text="@string/tap_ready_hint"
+            android:textAppearance="@style/TextAppearance.ColdTap.Label" />
+    </FrameLayout>
+
+    <!-- Status line under the card -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start"
+        android:layout_marginTop="20dp"
+        android:text="@string/tap_ready_title"
+        android:textAppearance="@style/TextAppearance.ColdTap.Label" />
+
+    <!-- Amount hero -->
+    <TextView
+        android:id="@+id/amountText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textAppearance="@style/TextAppearance.ColdTap.AmountMedium"
+        tools:text="3 XRP" />
+
+    <!-- Item name (subtle, below amount) -->
+    <TextView
+        android:id="@+id/itemText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textAppearance="@style/TextAppearance.ColdTap.Label"
+        tools:text="Coffee" />
+
+    <!-- Primary CTA — Cancel / Next customer / Try again -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/primaryButton"
+        style="@style/Widget.ColdTap.PrimaryButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="@string/tap_cancel" />
+
+    <!-- QR fallback — text link that opens a dialog with a scannable code -->
+    <TextView
+        android:id="@+id/showQrText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:gravity="center"
+        android:text="@string/tap_show_qr"
+        android:textColor="@color/accent"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif-medium"
+        android:background="?attr/selectableItemBackground" />
+
+</LinearLayout>

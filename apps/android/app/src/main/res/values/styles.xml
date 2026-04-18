@@ -1,5 +1,193 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- ================================================================== -->
+    <!-- Themes                                                               -->
+    <!-- ================================================================== -->
+
+    <!-- Default app theme — light, Square-blue accent. -->
+    <style name="Theme.ColdTap" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/text_on_accent</item>
+        <item name="colorPrimaryContainer">@color/accent_dim</item>
+        <item name="colorOnPrimaryContainer">@color/accent</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSurface">@color/bg_primary</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/bg_subtle</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutline">@color/border_subtle</item>
+
+        <item name="android:colorBackground">@color/bg_primary</item>
+        <item name="android:windowBackground">@color/bg_primary</item>
+        <item name="android:statusBarColor">@color/bg_primary</item>
+        <item name="android:navigationBarColor">@color/bg_primary</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+
+        <item name="android:textColor">@color/text_primary</item>
+
+        <item name="materialButtonStyle">@style/Widget.ColdTap.PrimaryButton</item>
+    </style>
+
+    <!-- Dark theme for the Receipt / Paid screen only. -->
+    <style name="Theme.ColdTap.Receipt" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/text_on_accent</item>
+        <item name="colorSurface">@color/receipt_bg</item>
+        <item name="colorOnSurface">@color/receipt_text_primary</item>
+
+        <item name="android:colorBackground">@color/receipt_bg</item>
+        <item name="android:windowBackground">@color/receipt_bg</item>
+        <item name="android:statusBarColor">@color/receipt_bg</item>
+        <item name="android:navigationBarColor">@color/receipt_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
+
+        <item name="android:textColor">@color/receipt_text_primary</item>
+    </style>
+
+    <!-- ================================================================== -->
+    <!-- Text appearances                                                     -->
+    <!-- ================================================================== -->
+
+    <style name="TextAppearance.ColdTap.AmountHero" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:textSize">72sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.AmountMedium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:fontFamily">sans-serif-black</item>
+        <item name="android:textSize">44sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.02</item>
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.Title" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.TabActive" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.TabInactive" parent="TextAppearance.ColdTap.TabActive">
+        <item name="android:textColor">@color/text_tertiary</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.Label" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.KeypadKey" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <!-- Receipt screen typography -->
+    <style name="TextAppearance.ColdTap.Receipt.AmountHero" parent="TextAppearance.ColdTap.AmountHero">
+        <item name="android:textColor">@color/receipt_text_primary</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.Receipt.Label" parent="TextAppearance.ColdTap.Label">
+        <item name="android:textColor">@color/receipt_text_secondary</item>
+    </style>
+
+    <style name="TextAppearance.ColdTap.Receipt.Value" parent="TextAppearance.ColdTap.Body">
+        <item name="android:textColor">@color/receipt_text_primary</item>
+    </style>
+
+    <!-- ================================================================== -->
+    <!-- Widget styles                                                        -->
+    <!-- ================================================================== -->
+
+    <style name="Widget.ColdTap.PrimaryButton" parent="Widget.Material3.Button">
+        <item name="android:layout_height">56dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/text_on_accent</item>
+        <item name="cornerRadius">16dp</item>
+        <item name="rippleColor">#33FFFFFF</item>
+    </style>
+
+    <style name="Widget.ColdTap.SecondaryButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_height">52dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="strokeColor">@color/border_subtle</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">14dp</item>
+    </style>
+
+    <!-- Keypad cell. Borderless background, big numeral. Divider effect is
+         produced by the grid's parent background showing through 1dp gaps. -->
+    <style name="Widget.ColdTap.KeypadButton" parent="Widget.Material3.Button">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_margin">0dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.ColdTap.KeypadKey</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="backgroundTint">@color/bg_primary</item>
+        <item name="cornerRadius">0dp</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="elevation">0dp</item>
+        <item name="rippleColor">@color/accent_ripple</item>
+    </style>
+
+    <!-- The "+ Note" pill under the amount hero. -->
+    <style name="Widget.ColdTap.NoteButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_height">44dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="strokeColor">@color/border_subtle</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">22dp</item>
+        <item name="icon">@drawable/ic_note</item>
+        <item name="iconTint">@color/text_primary</item>
+        <item name="iconSize">16dp</item>
+        <item name="iconPadding">6dp</item>
+    </style>
+
+    <style name="Widget.ColdTap.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">@color/accent</item>
+        <item name="boxStrokeErrorColor">@color/danger</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_tertiary</item>
+        <item name="boxBackgroundColor">@color/bg_primary</item>
+    </style>
+
+    <!-- ================================================================== -->
+    <!-- Legacy spike-UI styles (kept for Debug screen)                       -->
+    <!-- ================================================================== -->
+
     <style name="KvRow">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
@@ -11,7 +199,7 @@
     <style name="KvLabel">
         <item name="android:layout_width">96dp</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textColor">@color/subtle</item>
+        <item name="android:textColor">@color/text_secondary</item>
         <item name="android:textAllCaps">true</item>
         <item name="android:letterSpacing">0.15</item>
         <item name="android:textSize">12sp</item>
@@ -23,5 +211,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:fontFamily">monospace</item>
         <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_primary</item>
     </style>
+
 </resources>

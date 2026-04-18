@@ -32,11 +32,13 @@ class ColdTapApduService : HostApduService() {
 
         val response = Payload.buildSuccessResponse(sessionId)
         Log.i(TAG, "SELECT matched; sending SESSION:$sessionId (${response.size} bytes)")
+        TapEventBus.emit(TapEvent.ApduDispatched(sessionId))
         return response
     }
 
     override fun onDeactivated(reason: Int) {
         Log.d(TAG, "onDeactivated reason=$reason")
+        TapEventBus.emit(TapEvent.FieldLost)
     }
 
     private fun ByteArray.toHexString(): String =

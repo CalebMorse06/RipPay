@@ -25,7 +25,7 @@ export function SessionQR({
       errorCorrectionLevel: "M",
       margin: 1,
       scale: 6,
-      color: { dark: "#0b0f17", light: "#e6ebf4" },
+      color: { dark: "#111418", light: "#ffffff" },
     })
       .then((u) => {
         if (!cancelled) setDataUrl(u);
@@ -41,16 +41,16 @@ export function SessionQR({
 
   return (
     <div className="space-y-2">
-      <div className="flex aspect-square items-center justify-center rounded-lg bg-ink p-3">
+      <div className="flex aspect-square items-center justify-center rounded-xl border border-border bg-white p-3">
         {dataUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={dataUrl}
             alt={`QR code encoding ${launchUrl}`}
-            className="h-full w-full rounded"
+            className="h-full w-full rounded-md"
           />
         ) : (
-          <div className="h-full w-full animate-pulse rounded bg-border" />
+          <div className="h-full w-full animate-pulse rounded-md bg-surface-2" />
         )}
       </div>
       <a
