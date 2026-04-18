@@ -1,0 +1,10 @@
+{
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@coldtap/shared": ["../../packages/shared/src/index.ts"],
+      "@coldtap/shared/*": ["../../packages/shared/src/*"]
+    }
+  }
+}
