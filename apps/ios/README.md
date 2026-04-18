@@ -235,7 +235,60 @@ From there: sign `unsignedTx` on the Ledger, post the hex blob to `/submit-signe
 
 ---
 
-## 8. Glossary
+## 8. Optional: NFC launch path (Android HCE)
+
+ColdTap has a second, additive launch mechanism: the merchant runs the Android app in `apps/android/` which emulates an NFC card target. When the buyer taps the two phones back-to-back, the iPhone reads one short payload and enters the flow from §3. **This does not replace the QR path** — it's an alternative entry point for the same session fetch.
+
+### The reader contract
+
+You implement an `NFCTagReaderSession` configured for ISO 7816. The only new thing the iOS app needs to do is register the AID via entitlement and parse the response payload.
+
+```
+AID           : F0434F4C44544150                (proprietary, 8 bytes, "F0" + ASCII "COLDTAP")
+SELECT APDU   : 00 A4 04 00 08 F0 43 4F 4C 44 54 41 50 00
+RESPONSE OK   : <UTF-8 payload> 90 00
+  payload     : SESSION:<sessionId>
+RESPONSE NONE : 6F 00                           (tag in range but merchant hasn't set a session)
+RESPONSE NOAID: 6A 82                           (unknown tag — not a ColdTap merchant phone)
+```
+
+### Entitlement + Info.plist
+
+Add the iOS 13+ Core NFC entitlement:
+
+```xml
+<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+<array>
+    <string>F0434F4C44544150</string>
+</array>
+```
+
+And the usage description in `Info.plist`:
+
+```xml
+<key>NFCReaderUsageDescription</key>
+<string>Tap a merchant phone to open their checkout.</string>
+```
+
+### Flow once the payload is read
+
+1. Decode response bytes as UTF-8.
+2. Reject anything not starting with `SESSION:`. Strip the prefix. Validate the session id looks like `s_` + alphanumerics (same shape as the QR path).
+3. Enter the existing §3 flow at step 1: `GET {base}/api/sessions/{id}`. You need a backend base URL — use the same configured base as the QR path. Do not try to derive it from the NFC payload.
+
+That's the entire NFC change on the iOS side. Prepare, signing, and submit-signed are unchanged from §4.
+
+### Constraints
+
+- iOS Core NFC requires the app to be foregrounded during the session on most devices. The buyer taps **with the ColdTap iOS app already open** on a scan screen. Background tag reading is not relied on.
+- If the Android service returns `6F 00`, surface "merchant hasn't started a checkout yet" and dismiss. Do not call the backend with an empty id.
+- If the reader session errors or times out (common under poor antenna alignment), fall back to the QR path — show the QR scanner. Do not retry silently; the merchant may switch paths.
+
+See `apps/android/README.md` for the producer side, device requirements, and routing caveats.
+
+---
+
+## 9. Glossary
 
 - **InvoiceID** — 256-bit hex field on an XRPL Payment. ColdTap sets it to SHA-256 of the session id so the backend can bind a signed blob to a specific session. Never reuse.
 - **Drops** — smallest XRP unit. 1 XRP = 1,000,000 drops. The Session object carries `amountDrops` (integer string) and `amountDisplay` (human-readable).

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ColdTap HCE</string>
+    <string name="service_description">ColdTap checkout launch target</string>
+    <string name="aid_group_description">ColdTap session handoff</string>
+
+    <string name="title">ColdTap Merchant</string>
+    <string name="subtitle">NFC tap target</string>
+
+    <string name="label_nfc">NFC</string>
+    <string name="label_hce">HCE</string>
+    <string name="label_payload">Payload</string>
+    <string name="label_state">State</string>
+
+    <string name="state_ready">READY</string>
+    <string name="state_not_ready">NOT READY</string>
+
+    <string name="nfc_unsupported">not present</string>
+    <string name="nfc_disabled">disabled (enable NFC in Settings)</string>
+    <string name="nfc_enabled">enabled</string>
+    <string name="hce_supported">supported</string>
+    <string name="hce_unsupported">unsupported</string>
+
+    <string name="payload_none">— none —</string>
+
+    <string name="hint_session_id">s_XXXXXXXXXXXX</string>
+    <string name="button_set">Set</string>
+    <string name="button_paste">Paste</string>
+    <string name="button_clear">Clear</string>
+
+    <string name="footer">Hold the back of this phone against the buyer\'s iPhone for ~1s. Keep ColdTap in the foreground.</string>
+
+    <string name="toast_cleared">Payload cleared</string>
+    <string name="toast_set">Payload set</string>
+    <string name="toast_invalid">Enter a session id starting with \"s_\"</string>
+    <string name="toast_clipboard_empty">Clipboard is empty</string>
+</resources>

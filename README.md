@@ -9,6 +9,17 @@ A merchant creates a checkout session on the web. A buyer scans a QR on their iP
 
 ---
 
+## Launch paths
+
+The iPhone enters the checkout flow via one of two mechanisms. Both end at the same place — `GET /api/sessions/:id` followed by `POST /prepare` and `POST /submit-signed`. The backend contract does not care how the iPhone learned the session id.
+
+1. **HTTPS QR (primary, always works).** Merchant session page encodes `https://<base>/s/<id>`. iPhone scans with the camera; a universal link opens the app. Manual session-id entry is available as a fallback on the same URL. This path is fully documented in `apps/ios/README.md` §3.
+2. **Android HCE NFC tap (spike, additive).** Merchant runs the tiny Android app in `apps/android/`, which emulates an NFC card target. The iPhone reads one short APDU (`SESSION:<id>`) and enters the same flow. See `apps/android/README.md` for the APDU contract, device requirements, and routing caveats.
+
+The NFC path is additive and does not replace the QR path. If NFC misbehaves on demo day, the QR on the merchant screen is still live.
+
+---
+
 ## Architecture
 
 ```
