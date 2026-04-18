@@ -44,9 +44,9 @@ class InMemoryStore implements SessionStore {
 // ── Vercel KV implementation (production) ────────────────────────────────────
 
 class KvStore implements SessionStore {
-  private kv: import("@vercel/kv").VercelKV;
+  private kv: import("@upstash/redis").Redis;
 
-  constructor(kv: import("@vercel/kv").VercelKV) {
+  constructor(kv: import("@upstash/redis").Redis) {
     this.kv = kv;
   }
 
@@ -76,11 +76,13 @@ class KvStore implements SessionStore {
 // ── Store singleton ───────────────────────────────────────────────────────────
 
 function createStore(): SessionStore {
-  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-    // Lazy import so the package is only resolved when the env vars are present.
-    // This keeps local dev working without installing KV creds.
-    const { kv } = require("@vercel/kv") as typeof import("@vercel/kv");
-    return new KvStore(kv);
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const { Redis } = require("@upstash/redis") as typeof import("@upstash/redis");
+    const redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    return new KvStore(redis);
   }
 
   // Fallback: in-memory with globalThis so Next.js hot-reload doesn't wipe state.
