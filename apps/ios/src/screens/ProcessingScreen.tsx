@@ -33,6 +33,7 @@ import {fetchNetworkParams} from '../ledger/xrplNetwork';
 import {consumePrewarm} from '../ledger/LedgerSession';
 import type {XrplUnsignedTransaction, PrepareSessionResponse} from '@coldtap/shared';
 import {Colors, Typography, Radius} from '../theme';
+import {saveTx} from '../utils/txHistory';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Processing'>;
 
@@ -175,7 +176,29 @@ export default function ProcessingScreen({navigation, route}: Props) {
       await closeTransport(transport);
       transportRef.current = null;
       setBuyerStep('done');
-      navigation.replace('Success', {sessionId, txHash: result.txHash});
+
+      // Save to local history and gather details for success screen
+      const sessionData = await getSession(sessionId).catch(() => null);
+      if (sessionData) {
+        await saveTx({
+          txHash: result.txHash,
+          sessionId,
+          merchantName: sessionData.merchantName,
+          itemName: sessionData.itemName,
+          amountDisplay: sessionData.amountDisplay,
+          amountDrops: sessionData.amountDrops,
+          destinationAddress: sessionData.destinationAddress,
+          completedAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
+
+      navigation.replace('Success', {
+        sessionId,
+        txHash: result.txHash,
+        merchantName: sessionData?.merchantName,
+        itemName: sessionData?.itemName,
+        amountDisplay: sessionData?.amountDisplay,
+      });
     } catch (e: unknown) {
       await closeTransport(transportRef.current);
       transportRef.current = null;

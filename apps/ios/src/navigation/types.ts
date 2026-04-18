@@ -4,5 +4,11 @@ export type RootStackParamList = {
   MerchantLanding: {merchantId: string};
   Checkout: {sessionId: string};
   Processing: {sessionId: string};
-  Success: {sessionId: string; txHash: string};
+  Success: {
+    sessionId: string;
+    txHash: string;
+    merchantName?: string;
+    itemName?: string;
+    amountDisplay?: string;
+  };
 };

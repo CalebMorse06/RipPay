@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Alert,
   Clipboard,
   ActivityIndicator,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {useFocusEffect} from '@react-navigation/native';
 import {RootStackParamList} from '../navigation/types';
 import {useSessionStore} from '../store/sessionStore';
 import {parseLinkIntent} from '../utils/linkParser';
 import {readMerchantPayload, humanizeNFCError} from '../nfc/MerchantNFCReader';
+import {loadHistory, timeAgo, type TxRecord} from '../utils/txHistory';
 import {Colors, Typography, Radius, Shadow} from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -24,11 +27,19 @@ export default function HomeScreen({navigation}: Props) {
   const [devVisible, setDevVisible] = useState(false);
   const [nfcScanning, setNfcScanning] = useState(false);
   const [nfcError, setNfcError] = useState<string | null>(null);
+  const [history, setHistory] = useState<TxRecord[]>([]);
   const reset = useSessionStore(s => s.reset);
 
   useEffect(() => {
     reset();
   }, [reset]);
+
+  // Reload history every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory().then(setHistory);
+    }, []),
+  );
 
   async function handleTapMerchant() {
     setNfcError(null);
@@ -79,23 +90,26 @@ export default function HomeScreen({navigation}: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
 
-        {/* Wordmark */}
-        <View style={styles.hero}>
+        {/* Header */}
+        <View style={styles.header}>
           <Text style={styles.logo}>ColdTap</Text>
-          <Text style={styles.tagline}>Secure XRPL payments</Text>
+          <Text style={styles.tagline}>Hardware-secured XRPL payments</Text>
         </View>
 
-        {/* NFC tap card */}
+        {/* Primary CTA — Tap to Pay */}
         <TouchableOpacity
           style={[styles.tapCard, nfcScanning && styles.tapCardActive]}
           onPress={handleTapMerchant}
           disabled={nfcScanning}
           activeOpacity={0.85}>
-          <View style={styles.tapIconWrap}>
+          <View style={[styles.tapIconWrap, nfcScanning && styles.tapIconWrapActive]}>
             {nfcScanning
-              ? <ActivityIndicator size="small" color={Colors.primary} />
+              ? <ActivityIndicator size="small" color="#FFFFFF" />
               : <Text style={styles.tapIcon}>⬡</Text>
             }
           </View>
@@ -106,12 +120,10 @@ export default function HomeScreen({navigation}: Props) {
             <Text style={styles.tapBody}>
               {nfcScanning
                 ? 'Keep your iPhone close until it connects'
-                : 'Hold your iPhone near the merchant phone'}
+                : 'Hold your iPhone near the merchant device'}
             </Text>
           </View>
-          {!nfcScanning && (
-            <Text style={styles.tapChevron}>›</Text>
-          )}
+          {!nfcScanning && <Text style={styles.tapChevron}>›</Text>}
         </TouchableOpacity>
 
         {nfcError ? (
@@ -120,65 +132,136 @@ export default function HomeScreen({navigation}: Props) {
           </View>
         ) : null}
 
-        {/* Divider */}
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
+        {/* Secondary actions */}
+        <View style={styles.secondaryRow}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={handlePaste} activeOpacity={0.7}>
+            <Text style={styles.secondaryIcon}>⎘</Text>
+            <Text style={styles.secondaryButtonText}>Paste link</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => setDevVisible(v => !v)}
+            activeOpacity={0.7}>
+            <Text style={styles.secondaryIcon}>#</Text>
+            <Text style={styles.secondaryButtonText}>Enter ID</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Paste */}
-        <TouchableOpacity style={styles.secondaryButton} onPress={handlePaste}>
-          <Text style={styles.secondaryButtonText}>Paste payment link</Text>
-        </TouchableOpacity>
-
-        {/* Manual entry toggle */}
-        <TouchableOpacity
-          style={styles.devToggle}
-          onPress={() => setDevVisible(v => !v)}>
-          <Text style={styles.devToggleText}>
-            {devVisible ? 'Hide manual entry' : 'Enter session ID'}
-          </Text>
-        </TouchableOpacity>
-
         {devVisible && (
-          <View style={styles.devSection}>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.input}
-                value={devInput}
-                onChangeText={setDevInput}
-                placeholder="Session ID or link"
-                placeholderTextColor={Colors.textTertiary}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="go"
-                onSubmitEditing={handleDevLoad}
-              />
-              <TouchableOpacity style={styles.goButton} onPress={handleDevLoad}>
-                <Text style={styles.goButtonText}>Go</Text>
-              </TouchableOpacity>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={devInput}
+              onChangeText={setDevInput}
+              placeholder="Session ID or link"
+              placeholderTextColor={Colors.textTertiary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleDevLoad}
+            />
+            <TouchableOpacity style={styles.goButton} onPress={handleDevLoad}>
+              <Text style={styles.goButtonText}>Go</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Recent payments */}
+        {history.length > 0 && (
+          <View style={styles.historySection}>
+            <Text style={styles.sectionTitle}>Recent Payments</Text>
+            <View style={styles.historyList}>
+              {history.slice(0, 5).map((tx, i) => (
+                <HistoryRow key={tx.txHash} tx={tx} last={i === Math.min(history.length, 5) - 1} />
+              ))}
             </View>
           </View>
         )}
-      </View>
+
+      </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Secured by Ledger · Settled on XRPL</Text>
+        <Text style={styles.footerText}>🔒 Secured by Ledger · Settled on XRPL</Text>
       </View>
     </SafeAreaView>
   );
 }
 
+function HistoryRow({tx, last}: {tx: TxRecord; last: boolean}) {
+  const initial = tx.merchantName[0]?.toUpperCase() ?? '?';
+  return (
+    <View style={[histStyles.row, last && histStyles.lastRow]}>
+      <View style={histStyles.avatar}>
+        <Text style={histStyles.initial}>{initial}</Text>
+      </View>
+      <View style={histStyles.info}>
+        <Text style={histStyles.merchant}>{tx.merchantName}</Text>
+        <Text style={histStyles.item} numberOfLines={1}>{tx.itemName}</Text>
+      </View>
+      <View style={histStyles.right}>
+        <Text style={histStyles.amount}>{tx.amountDisplay} XRP</Text>
+        <Text style={histStyles.time}>{timeAgo(tx.completedAt)}</Text>
+      </View>
+    </View>
+  );
+}
+
+const histStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 12,
+  },
+  lastRow: {borderBottomWidth: 0},
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initial: {
+    fontSize: Typography.base,
+    fontWeight: Typography.bold,
+    color: Colors.textSecondary,
+  },
+  info: {flex: 1},
+  merchant: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+    color: Colors.textPrimary,
+  },
+  item: {
+    fontSize: Typography.xs,
+    color: Colors.textTertiary,
+    marginTop: 1,
+  },
+  right: {alignItems: 'flex-end'},
+  amount: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.bold,
+    color: Colors.textPrimary,
+  },
+  time: {
+    fontSize: Typography.xs,
+    color: Colors.textTertiary,
+    marginTop: 1,
+  },
+});
+
 const styles = StyleSheet.create({
   container: {flex: 1, backgroundColor: Colors.background},
   content: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    gap: 16,
   },
-  hero: {alignItems: 'center', marginBottom: 8},
+  header: {alignItems: 'center', paddingVertical: 16},
   logo: {
     fontSize: Typography.xxl,
     fontWeight: Typography.heavy,
@@ -187,49 +270,52 @@ const styles = StyleSheet.create({
   },
   tagline: {
     fontSize: Typography.sm,
-    color: Colors.textSecondary,
+    color: Colors.textTertiary,
     marginTop: 4,
   },
   tapCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xl,
     borderWidth: 1.5,
     borderColor: Colors.primary,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    gap: 14,
-    ...Shadow.card,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    gap: 16,
+    ...Shadow.button,
   },
   tapCardActive: {
     borderColor: Colors.primaryDark,
     backgroundColor: '#DAF0FF',
   },
   tapIconWrap: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: Radius.full,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tapIcon: {fontSize: 20, color: '#FFFFFF'},
+  tapIconWrapActive: {
+    backgroundColor: Colors.primaryDark,
+  },
+  tapIcon: {fontSize: 22, color: '#FFFFFF'},
   tapTextWrap: {flex: 1},
   tapHeading: {
-    fontSize: Typography.base,
+    fontSize: Typography.md,
     fontWeight: Typography.bold,
     color: Colors.primaryDark,
   },
   tapBody: {
     fontSize: Typography.xs,
     color: Colors.primary,
-    marginTop: 2,
+    marginTop: 3,
+    lineHeight: 17,
   },
   tapChevron: {
-    fontSize: 22,
+    fontSize: 26,
     color: Colors.primary,
-    fontWeight: Typography.regular,
   },
   errorBanner: {
     backgroundColor: Colors.errorLight,
@@ -243,34 +329,35 @@ const styles = StyleSheet.create({
     fontSize: Typography.sm,
     color: Colors.error,
   },
-  divider: {
+  secondaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  secondaryButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginVertical: 2,
-  },
-  dividerLine: {flex: 1, height: 1, backgroundColor: Colors.border},
-  dividerText: {fontSize: Typography.sm, color: Colors.textTertiary},
-  secondaryButton: {
+    justifyContent: 'center',
+    gap: 7,
     backgroundColor: Colors.surface,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingVertical: 14,
-    alignItems: 'center',
+    paddingVertical: 13,
+  },
+  secondaryIcon: {
+    fontSize: 16,
+    color: Colors.textSecondary,
   },
   secondaryButtonText: {
-    fontSize: Typography.base,
+    fontSize: Typography.sm,
     fontWeight: Typography.semibold,
     color: Colors.textSecondary,
   },
-  devToggle: {alignItems: 'center', paddingVertical: 2},
-  devToggleText: {
-    fontSize: Typography.sm,
-    color: Colors.textTertiary,
+  inputRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  devSection: {gap: 10},
-  inputRow: {flexDirection: 'row', gap: 8},
   input: {
     flex: 1,
     backgroundColor: Colors.surface,
@@ -293,6 +380,31 @@ const styles = StyleSheet.create({
     fontWeight: Typography.bold,
     color: Colors.textOnPrimary,
   },
-  footer: {paddingBottom: 24, alignItems: 'center'},
-  footerText: {fontSize: Typography.xs, color: Colors.textTertiary},
+  historySection: {
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.bold,
+    color: Colors.textTertiary,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  historyList: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadow.card,
+  },
+  footer: {
+    paddingBottom: 20,
+    paddingTop: 8,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: Typography.xs,
+    color: Colors.textTertiary,
+  },
 });

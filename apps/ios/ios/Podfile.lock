@@ -1547,6 +1547,8 @@ PODS:
     - React-logger (= 0.75.4)
     - React-perflogger (= 0.75.4)
     - React-utils (= 0.75.4)
+  - RNCAsyncStorage (2.2.0):
+    - React-Core
   - RNPermissions (4.1.5):
     - React-Core
   - RNScreens (3.37.0):
@@ -1655,6 +1657,7 @@ DEPENDENCIES:
   - React-utils (from `../../../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../../node_modules/react-native/ReactCommon`)
+  - "RNCAsyncStorage (from `../../../node_modules/@react-native-async-storage/async-storage`)"
   - RNPermissions (from `../../../node_modules/react-native-permissions`)
   - RNScreens (from `../../../node_modules/react-native-screens`)
   - VisionCamera (from `../../../node_modules/react-native-vision-camera`)
@@ -1799,6 +1802,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../../../node_modules/react-native/ReactCommon"
+  RNCAsyncStorage:
+    :path: "../../../node_modules/@react-native-async-storage/async-storage"
   RNPermissions:
     :path: "../../../node_modules/react-native-permissions"
   RNScreens:
@@ -1876,6 +1881,7 @@ SPEC CHECKSUMS:
   React-utils: 02526ea15628a768b8db9517b6017a1785c734d2
   ReactCodegen: 4ee74815bbf19f42fbda89a677a7966fb6cb79c0
   ReactCommon: 36d48f542b4010786d6b2bcee615fe5f906b7105
+  RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
   RNPermissions: 4f7b81b0d457c8ec4e892cc36ef2376734a4b22c
   RNScreens: 631b8768411a16e356f7934058d2139d0cc75157
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d

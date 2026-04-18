@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@coldtap/shared": "*",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@ledgerhq/devices": "^8.4.4",
     "@ledgerhq/hw-app-xrp": "^6.27.19",
     "@ledgerhq/react-native-hw-transport-ble": "^6.29.0",
