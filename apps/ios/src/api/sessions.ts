@@ -55,7 +55,7 @@ export async function submitSignedBlob(
   try {
     const res = await client.post<SubmitSessionResponse>(
       `/api/sessions/${id}/submit-signed`,
-      {signedTxBlob},
+      {txBlob: signedTxBlob},
     );
     return res.data;
   } catch (e: any) {
@@ -63,7 +63,7 @@ export async function submitSignedBlob(
       // Fall back to original route
       const res = await client.post<SubmitSessionResponse>(
         `/api/sessions/${id}/submit`,
-        {signedTxBlob},
+        {txBlob: signedTxBlob},
       );
       return res.data;
     }
