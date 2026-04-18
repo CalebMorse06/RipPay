@@ -1,0 +1,15 @@
+node_modules/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+apps/ios/.env
+apps/ios/ios/Pods/
+apps/ios/ios/build/
+apps/ios/android/.gradle/
+apps/ios/android/build/
+apps/ios/android/app/build/
+
+*.log
+.DS_Store

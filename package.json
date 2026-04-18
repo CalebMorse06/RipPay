@@ -1,0 +1,8 @@
+{
+  "name": "coldtap",
+  "private": true,
+  "workspaces": [
+    "apps/ios",
+    "packages/shared"
+  ]
+}
