@@ -25,43 +25,33 @@ export type LinkIntent =
   | {type: 'session'; sessionId: string}
   | {type: 'unknown'};
 
-const MERCHANT_SEGMENTS = new Set(['merchant', 'tap', 'm']);
-const SESSION_SEGMENTS = new Set(['session', 'sessions', 's', 'pay']);
-
 export function parseLinkIntent(input: string): LinkIntent {
-  const trimmed = input.trim();
-  if (!trimmed) return {type: 'unknown'};
+  const t = input.trim();
+  if (!t) return {type: 'unknown'};
 
-  try {
-    const normalized = trimmed.startsWith('coldtap://')
-      ? trimmed.replace('coldtap://', 'https://coldtap.local/')
-      : trimmed;
+  // coldtap:// deep links (NFC path)
+  const ctSession = t.match(/^coldtap:\/\/(?:session|s)\/([^/?#\s]+)/i);
+  if (ctSession?.[1]) return {type: 'session', sessionId: ctSession[1]};
 
-    const url = new URL(normalized);
-    const parts = url.pathname.split('/').filter(Boolean);
+  const ctMerchant = t.match(/^coldtap:\/\/(?:merchant|tap|m)\/([^/?#\s]+)/i);
+  if (ctMerchant?.[1]) return {type: 'merchant', merchantId: ctMerchant[1]};
 
-    // Walk path segments looking for merchant or session keywords
-    for (let i = 0; i < parts.length - 1; i++) {
-      if (MERCHANT_SEGMENTS.has(parts[i]) && parts[i + 1]) {
-        return {type: 'merchant', merchantId: parts[i + 1]};
-      }
-      if (SESSION_SEGMENTS.has(parts[i]) && parts[i + 1]) {
-        return {type: 'session', sessionId: parts[i + 1]};
-      }
-    }
+  // https:// URLs (QR code / paste)
+  const httpSession = t.match(/https?:\/\/[^/]+\/(?:session|sessions|s|pay)\/([^/?#\s]+)/i);
+  if (httpSession?.[1]) return {type: 'session', sessionId: httpSession[1]};
 
-    // Query params
-    const qp = url.searchParams;
-    const merchantId = qp.get('merchant') ?? qp.get('merchantId');
-    if (merchantId) return {type: 'merchant', merchantId};
-    const sessionId = qp.get('id') ?? qp.get('session') ?? qp.get('sessionId');
-    if (sessionId) return {type: 'session', sessionId};
-  } catch {}
+  const httpMerchant = t.match(/https?:\/\/[^/]+\/(?:merchant|tap|m)\/([^/?#\s]+)/i);
+  if (httpMerchant?.[1]) return {type: 'merchant', merchantId: httpMerchant[1]};
 
-  // Bare string — treat as raw session ID (manual dev entry)
-  if (trimmed.length > 2) {
-    return {type: 'session', sessionId: trimmed};
-  }
+  // Query params
+  const sessionParam = t.match(/[?&](?:id|session|sessionId)=([^&\s]+)/);
+  if (sessionParam?.[1]) return {type: 'session', sessionId: sessionParam[1]};
+
+  const merchantParam = t.match(/[?&](?:merchant|merchantId)=([^&\s]+)/);
+  if (merchantParam?.[1]) return {type: 'merchant', merchantId: merchantParam[1]};
+
+  // Bare string — treat as session ID (manual entry)
+  if (t.length > 2 && !t.includes('://')) return {type: 'session', sessionId: t};
 
   return {type: 'unknown'};
 }
