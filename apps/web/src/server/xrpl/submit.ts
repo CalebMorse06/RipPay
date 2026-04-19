@@ -1,41 +1,32 @@
 import type { Session } from "@coldtap/shared";
-import { getXrplMode, getXrplWsUrl } from "../config";
+import { getXrplMode, getXrplRpcUrl } from "../config";
 import { sessionEvents } from "../events";
 import { sessionStore } from "../store";
 
 /**
  * XRPL submit + validation tracking.
  *
- * Behavior is split by `XRPL_MODE`:
+ * Serverless-safe: uses HTTP JSON-RPC (not WebSocket). Vercel's Lambda workers
+ * freeze between invocations and WebSocket connections die silently, producing
+ * "WebSocket is closed" errors on the second `request()`. HTTP is stateless
+ * and reliable.
  *
- *   mock  (default, dev + demo fallback) — simulates SUBMITTED → VALIDATING → PAID
- *         with reliable timing so the demo never flakes on network conditions.
- *         Uses the caller-supplied txHash as-is; no XRPL client is opened.
- *
- *   real  — submits the signed blob over a WebSocket Client, polls for ledger
- *           validation up to a deadline, maps the final result code to PAID
- *           or FAILED, and records a failureReason on failure.
+ * XRPL_MODE=mock  — fake SUBMITTED → VALIDATING → PAID progression, no network
+ * XRPL_MODE=real  — POST to XRPL JSON-RPC, poll tx by hash until validated
  */
 
 type Logger = (msg: string, meta?: Record<string, unknown>) => void;
 
 const log: Logger = (msg, meta) => {
   const prefix = "[coldtap:xrpl]";
-  if (meta) {
-    console.log(`${prefix} ${msg}`, meta);
-  } else {
-    console.log(`${prefix} ${msg}`);
-  }
+  if (meta) console.log(`${prefix} ${msg}`, meta);
+  else console.log(`${prefix} ${msg}`);
 };
 
 /**
- * Record SUBMITTED state and kick off provider-specific progression in the
- * background. Returns immediately with the already-known tx hash.
- *
- * Kept for local dev and tests where the Node process lives past the response.
- * On Vercel serverless the background work is killed when the response returns,
- * so route handlers should call `markSubmittedOnly` + `runValidation`
- * separately and wrap `runValidation` with `next/server`'s `after()`.
+ * Legacy entrypoint — fire-and-forget submit + validation. Only safe on a
+ * long-lived Node process (local dev, tests). Vercel route handlers must use
+ * `markSubmittedOnly` + `submitToNetwork` (inline) + `runValidation` (after()).
  */
 export async function submitSignedBlob(args: {
   sessionId: string;
@@ -49,7 +40,15 @@ export async function submitSignedBlob(args: {
     return;
   }
 
-  void submitReal(args.sessionId, args.txBlob, args.txHash);
+  void (async () => {
+    const submitResult = await submitToNetwork(args.txBlob);
+    if (!submitResult.ok) {
+      await markFailed(args.sessionId, submitResult.reason);
+      return;
+    }
+    await markValidating(args.sessionId);
+    await trackValidation(args.sessionId, args.txHash);
+  })();
 }
 
 /** Synchronous half: update Redis to SUBMITTED so pollers see immediate progress. */
@@ -57,84 +56,84 @@ export async function markSubmittedOnly(sessionId: string, txHash: string): Prom
   await markSubmitted(sessionId, txHash);
 }
 
+export interface SubmitResult {
+  ok: boolean;
+  engineResult?: string;
+  /** When ok=false. Sets session.failureReason on the merchant page. */
+  reason: string;
+}
+
 /**
- * Async half: submit the blob to XRPL and poll for validation. Awaitable so
- * route handlers can pass it to `after()` and extend the Vercel function
- * lifetime past the response. Returns when PAID, FAILED, or the deadline hits.
+ * Submit the signed blob to XRPL via JSON-RPC. Single HTTP round-trip.
+ * Returns {ok: true} on provisional success, {ok: false, reason} otherwise.
+ * Route handlers call this inline so iPhone sees the real error, not a
+ * delayed SSE-only failure.
+ */
+export async function submitToNetwork(txBlob: string): Promise<SubmitResult> {
+  if (getXrplMode() === "mock") {
+    return { ok: true, engineResult: "tesSUCCESS", reason: "" };
+  }
+
+  try {
+    const result = await jsonRpc<{ engine_result?: string; engine_result_message?: string }>(
+      "submit",
+      { tx_blob: txBlob, fail_hard: false },
+    );
+    const engineResult = result.engine_result ?? "";
+    log("submit", { engineResult, message: result.engine_result_message });
+
+    if (!isProvisionallySuccessful(engineResult)) {
+      return {
+        ok: false,
+        engineResult,
+        reason: `submit: ${engineResult || "unknown"}${result.engine_result_message ? ` — ${result.engine_result_message}` : ""}`,
+      };
+    }
+    return { ok: true, engineResult, reason: "" };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    log("submit error", { reason });
+    return { ok: false, reason };
+  }
+}
+
+/**
+ * Awaitable validation tracker. Wrap in Next.js `after()` so Vercel keeps the
+ * function warm past the response. Polls `tx` via JSON-RPC until validated,
+ * then writes PAID/FAILED to Redis.
  */
 export async function runValidation(args: {
   sessionId: string;
-  txBlob: string;
   txHash: string;
 }): Promise<void> {
   if (getXrplMode() === "mock") {
     await runMockProgression(args.sessionId);
     return;
   }
-  await submitReal(args.sessionId, args.txBlob, args.txHash);
+  await trackValidation(args.sessionId, args.txHash);
 }
 
-async function submitReal(sessionId: string, txBlob: string, txHash: string): Promise<void> {
-  let client: import("xrpl").Client | null = null;
-  try {
-    const { Client } = await import("xrpl");
-    client = new Client(getXrplWsUrl());
-    await client.connect();
-
-    const submit = await client.request({ command: "submit", tx_blob: txBlob });
-    const engineResult =
-      (submit.result as { engine_result?: string }).engine_result ?? "";
-    log("submit", { sessionId, txHash, engineResult });
-
-    if (!isProvisionallySuccessful(engineResult)) {
-      await markFailed(sessionId, `submit: ${engineResult || "unknown"}`);
-      return;
-    }
-
-    await markValidating(sessionId);
-    await trackValidation(client, sessionId, txHash);
-  } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    log("submit error", { sessionId, reason });
-    await markFailed(sessionId, reason);
-  } finally {
-    try {
-      await client?.disconnect();
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
-function isProvisionallySuccessful(engineResult: string): boolean {
-  // tesSUCCESS, tec* codes and ter* codes are provisionally accepted; only
-  // tem*/tef*/tel* fail hard at submit time.
-  return (
-    engineResult === "tesSUCCESS" ||
-    engineResult.startsWith("tes") ||
-    engineResult.startsWith("tec") ||
-    engineResult.startsWith("ter")
-  );
-}
-
-async function trackValidation(
-  client: import("xrpl").Client,
-  sessionId: string,
-  txHash: string,
-): Promise<void> {
-  const deadline = Date.now() + 60_000;
+async function trackValidation(sessionId: string, txHash: string): Promise<void> {
+  const deadline = Date.now() + 50_000; // leave headroom under 60s maxDuration
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 2000));
     try {
-      const res = await client.request({ command: "tx", transaction: txHash });
-      const validated = (res.result as { validated?: boolean }).validated === true;
-      const meta = (res.result as { meta?: unknown }).meta;
-      const resultCode =
-        typeof meta === "object" && meta !== null && "TransactionResult" in meta
-          ? String((meta as { TransactionResult: string }).TransactionResult)
-          : "";
+      const result = await jsonRpc<{
+        validated?: boolean;
+        meta?: unknown;
+        status?: string;
+        error?: string;
+      }>("tx", { transaction: txHash, binary: false });
 
-      if (!validated) continue;
+      // "txnNotFound" just means the tx hasn't been validated yet; keep polling.
+      if (result.error === "txnNotFound" || result.status === "error") continue;
+
+      if (result.validated !== true) continue;
+
+      const resultCode =
+        typeof result.meta === "object" && result.meta !== null && "TransactionResult" in result.meta
+          ? String((result.meta as { TransactionResult: string }).TransactionResult)
+          : "";
 
       if (resultCode === "tesSUCCESS") {
         log("validated paid", { sessionId, txHash });
@@ -144,8 +143,9 @@ async function trackValidation(
         await markFailed(sessionId, `validated: ${resultCode || "unknown"}`);
       }
       return;
-    } catch {
-      // Transaction may not be visible yet; keep polling until deadline.
+    } catch (err) {
+      // Transient HTTP/network hiccup; keep polling until deadline.
+      log("tx poll error", { reason: err instanceof Error ? err.message : String(err) });
     }
   }
   log("validation timeout", { sessionId, txHash });
@@ -160,6 +160,37 @@ async function runMockProgression(sessionId: string): Promise<void> {
   if (current && current.status === "VALIDATING" && current.txHash) {
     await markPaid(sessionId, current.txHash);
   }
+}
+
+function isProvisionallySuccessful(engineResult: string): boolean {
+  return (
+    engineResult === "tesSUCCESS" ||
+    engineResult.startsWith("tes") ||
+    engineResult.startsWith("tec") ||
+    engineResult.startsWith("ter")
+  );
+}
+
+/**
+ * Minimal rippled JSON-RPC client. No xrpl.js / WebSocket dependency.
+ * https://xrpl.org/docs/references/http-websocket-apis/
+ */
+async function jsonRpc<T>(method: string, params: Record<string, unknown>): Promise<T> {
+  const url = getXrplRpcUrl();
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ method, params: [params] }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`JSON-RPC HTTP ${res.status}: ${text.slice(0, 200)}`);
+  }
+  const json = (await res.json()) as { result?: T & { error?: string; error_message?: string } };
+  if (!json.result) {
+    throw new Error(`JSON-RPC no result in response`);
+  }
+  return json.result;
 }
 
 async function markSubmitted(sessionId: string, txHash: string): Promise<Session | undefined> {

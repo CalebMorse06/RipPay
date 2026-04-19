@@ -6,6 +6,7 @@ import {
   hashSignedBlob,
   markSubmittedOnly,
   runValidation,
+  submitToNetwork,
   verifySignedBlob,
 } from "@/server/xrpl";
 
@@ -100,23 +101,33 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     );
   }
 
-  try {
-    await markSubmittedOnly(id, txHash);
-  } catch (err) {
+  await markSubmittedOnly(id, txHash);
+
+  // Submit inline so the iPhone sees the real XRPL result. Fast: one HTTP
+  // round-trip (~1–2s on testnet). If the network rejects the tx, respond
+  // 502 with the engine_result so the buyer isn't told "complete" falsely.
+  const submitResult = await submitToNetwork(parsed.data.txBlob);
+  if (!submitResult.ok) {
+    const failed = await sessionStore.update(id, {
+      status: "FAILED",
+      failureReason: submitResult.reason,
+      failedAt: new Date().toISOString(),
+    });
+    if (failed) sessionEvents.emit(failed);
     return NextResponse.json(
-      {
-        error: "Submit failed",
-        detail: err instanceof Error ? err.message : String(err),
-      },
+      { error: "XRPL rejected the transaction", detail: submitResult.reason },
       { status: 502 },
     );
   }
 
-  // Kick off XRPL submit + validation tracking AFTER the response returns.
-  // Vercel keeps the function warm until this promise settles (or maxDuration).
+  const advancing = await sessionStore.update(id, { status: "VALIDATING" });
+  if (advancing) sessionEvents.emit(advancing);
+
+  // Poll for ledger validation past the response — Vercel keeps the function
+  // warm via `after()` until this settles or maxDuration hits.
   after(async () => {
     try {
-      await runValidation({ sessionId: id, txBlob: parsed.data.txBlob, txHash });
+      await runValidation({ sessionId: id, txHash });
     } catch (err) {
       console.error("[submit-signed] runValidation threw", err);
     }

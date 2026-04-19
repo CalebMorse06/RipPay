@@ -7,6 +7,7 @@ import {
   hashSignedBlob,
   markSubmittedOnly,
   runValidation,
+  submitToNetwork,
   verifySignedBlob,
 } from "@/server/xrpl";
 
@@ -77,21 +78,31 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     }
   }
 
-  try {
-    await markSubmittedOnly(id, txHash);
-  } catch (err) {
-    return NextResponse.json(
-      {
-        error: "Submit failed",
-        detail: err instanceof Error ? err.message : String(err),
-      },
-      { status: 502 },
-    );
+  await markSubmittedOnly(id, txHash);
+
+  // Real mode: submit inline so the iPhone sees the real XRPL result.
+  // Mock mode: skip network and let runValidation fake PAID progression.
+  if (!isMock) {
+    const submitResult = await submitToNetwork(parsed.data.txBlob);
+    if (!submitResult.ok) {
+      const failed = await sessionStore.update(id, {
+        status: "FAILED",
+        failureReason: submitResult.reason,
+        failedAt: new Date().toISOString(),
+      });
+      if (failed) sessionEvents.emit(failed);
+      return NextResponse.json(
+        { error: "XRPL rejected the transaction", detail: submitResult.reason },
+        { status: 502 },
+      );
+    }
+    const advancing = await sessionStore.update(id, { status: "VALIDATING" });
+    if (advancing) sessionEvents.emit(advancing);
   }
 
   after(async () => {
     try {
-      await runValidation({ sessionId: id, txBlob: parsed.data.txBlob, txHash });
+      await runValidation({ sessionId: id, txHash });
     } catch (err) {
       console.error("[submit] runValidation threw", err);
     }

@@ -25,6 +25,19 @@ export function getXrplWsUrl(): string {
     : "wss://s.altnet.rippletest.net:51233";
 }
 
+/**
+ * JSON-RPC (HTTP) endpoint. Preferred over WebSocket from serverless (Vercel)
+ * because Lambda execution contexts freeze between invocations and kill
+ * long-lived WebSocket connections, producing "WebSocket is closed" errors on
+ * the second request. HTTP is stateless and always works.
+ */
+export function getXrplRpcUrl(): string {
+  if (process.env.XRPL_RPC_URL) return process.env.XRPL_RPC_URL;
+  return getNetwork() === "mainnet"
+    ? "https://xrplcluster.com"
+    : "https://s.altnet.rippletest.net:51234";
+}
+
 export function getExplorerTxUrl(txHash: string): string {
   return getNetwork() === "mainnet"
     ? `https://livenet.xrpl.org/transactions/${txHash}`
