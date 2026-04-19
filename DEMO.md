@@ -1,6 +1,8 @@
-# ColdTap — Demo flows
+# RipPay — Demo flows
 
 What the judges actually see, what hardware you need, and which flow is safe to commit to given the current build state.
+
+> Internal identifiers (`coldtap://` URL scheme, `apps/android/app/src/main/java/com/coldtap/hce`, Xcode project name `ColdTap`) are preserved across the rebrand for signing/provisioning continuity. Product name is RipPay.
 
 ---
 

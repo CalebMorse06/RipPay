@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  * Buyer launch page.
  *
  * This is the target of the QR code / universal link. On an iPhone with the
- * ColdTap app installed the associated domain's universal-link rules will
+ * RipPay app installed the associated domain's universal-link rules will
  * intercept the URL and open the native app before this page renders. Without
  * the app (or in a browser on desktop) the page shows a summary of the
  * checkout plus the raw session id for manual entry into the iPhone app.
@@ -26,7 +26,7 @@ export default async function BuyerLaunchPage({
   return (
     <div className="mx-auto max-w-md space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Pay with ColdTap</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Pay with RipPay</h1>
         <StatusBadge status={session.status} />
       </div>
 
@@ -52,8 +52,8 @@ export default async function BuyerLaunchPage({
 
       <div className="rounded-xl border border-dashed border-border bg-surface/30 p-4 text-sm leading-relaxed text-subtle">
         <p className="mb-2">
-          Open this page on the <strong className="text-ink">ColdTap iPhone app</strong> to review
-          and approve this payment on your Ledger Nano X.
+          Open this page on the <strong className="text-ink">RipPay iPhone app</strong> to review
+          and approve this payment on your Ledger Nano X or on-device wallet.
         </p>
         <p>
           If the app didn&apos;t open automatically, open it and enter the session id below.
@@ -67,7 +67,7 @@ export default async function BuyerLaunchPage({
 
       <div className="text-center text-xs text-subtle">
         <Link href="/" className="hover:text-ink">
-          ColdTap — self-custody XRPL checkout
+          RipPay — self-custody XRPL checkout
         </Link>
       </div>
     </div>

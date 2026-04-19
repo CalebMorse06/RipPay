@@ -1,3 +1,18 @@
+/**
+ * XRPL signed-transaction verification — the backend's trust anchor.
+ *
+ * Every signed `tx_blob` submitted by a buyer is decoded here before it is
+ * forwarded to rippled. A blob is rejected unless all four hold:
+ *
+ *   1. TransactionType === "Payment" and has both TxnSignature + SigningPubKey
+ *   2. Destination matches the session's destinationAddress
+ *   3. Amount (drops, as string) matches the session's amountDrops exactly
+ *   4. InvoiceID === SHA256(sessionId) — binds the blob to one session so
+ *      it cannot be replayed against a different checkout
+ *
+ * See `../invoice.ts` for the InvoiceID derivation and `verify.test.ts` for
+ * the rejection test matrix.
+ */
 import type { Session } from "@coldtap/shared";
 import { invoiceIdFor } from "../invoice";
 

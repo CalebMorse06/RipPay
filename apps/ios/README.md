@@ -1,6 +1,8 @@
-# ColdTap — iPhone Buyer App
+# RipPay — iPhone Buyer App
 
-Self-custody, in-person XRPL checkout. The buyer loads a payment session on their iPhone, reviews it, and approves with a **Ledger Nano X** via Bluetooth. The private key never leaves the hardware wallet.
+Self-custody, in-person XRPL checkout. The buyer loads a payment session on their iPhone, reviews it, and approves it — either on a **Ledger Nano X** over Bluetooth (private key never leaves the hardware wallet) or with an XRPL seed stored in the iOS Keychain behind Face ID (signs locally, no BLE). Ledger is the default and the marquee path; on-device signing is opt-in via Settings for demos without hardware.
+
+> The package directory is still `apps/ios/` and the Xcode project is still named `ColdTap` — those are legacy identifiers kept for code-signing continuity. The product, display name, and app icon are all RipPay.
 
 ---
 

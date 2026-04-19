@@ -1,3 +1,12 @@
+/**
+ * Client-side UI state for the buyer-side payment flow. Holds the currently
+ * loaded Session plus ephemeral UI stage (BuyerStep) for progress rendering.
+ *
+ * The authoritative session record lives on the backend (polled + SSE from
+ * /api/sessions/:id/events). Never treat anything in this store as source of
+ * truth for payment status — re-read from the server before any state-changing
+ * action.
+ */
 import {create} from 'zustand';
 import {Session} from '@coldtap/shared';
 import {releaseAll} from '../ledger/LedgerSession';

@@ -15,3 +15,11 @@ apps/ios/android/app/build/
 
 *.log
 .DS_Store
+
+# iOS build artifacts
+*.ipa
+*.xcarchive
+*.dSYM/
+
+# TypeScript incremental build
+*.tsbuildinfo

@@ -38,7 +38,7 @@ export function encodeForSigning(
   const tx: Record<string, unknown> = {
     ...unsignedTx,
     Account: buyerAddress,
-    SigningPubKey: buyerPublicKey.toUpperCase(),
+    SigningPubKey: buyerPublicKey.toUpperCase(), // XRPL canonical format is uppercase hex.
     // Flags default: tfFullyCanonicalSig is deprecated in rippled 1.7+, don't set
   };
 

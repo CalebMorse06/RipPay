@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import QRScannerModal from '../components/QRScannerModal';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -105,7 +106,12 @@ export default function HomeScreen({navigation}: Props) {
         <View style={styles.header}>
           <View style={styles.headerSpacer} />
           <View style={styles.headerCenter}>
-            <Text style={styles.logo}>RipPay</Text>
+            <Image
+              source={require('../assets/brand_wordmark.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+              accessibilityLabel="RipPay"
+            />
             <Text style={styles.tagline}>Tap. Sign. Settle.</Text>
           </View>
           <TouchableOpacity
@@ -113,7 +119,7 @@ export default function HomeScreen({navigation}: Props) {
             onPress={() => navigation.navigate('Settings')}
             accessibilityLabel="Settings"
             activeOpacity={0.7}>
-            <Text style={styles.settingsIcon}>⚙</Text>
+            <Text style={styles.settingsIcon}>⋯</Text>
           </TouchableOpacity>
         </View>
 
@@ -315,14 +321,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   settingsIcon: {
-    fontSize: 20,
+    fontSize: 24,
+    fontWeight: Typography.bold,
     color: Colors.textSecondary,
+    lineHeight: 24,
+    marginTop: -6,
   },
-  logo: {
-    fontSize: Typography.xxl,
-    fontWeight: Typography.heavy,
-    color: Colors.textPrimary,
-    letterSpacing: -1,
+  logoImage: {
+    height: 32,
+    width: 110,
   },
   tagline: {
     fontSize: Typography.sm,

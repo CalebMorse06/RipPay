@@ -1,8 +1,10 @@
-# ColdTap Android HCE — NFC launch spike
+# RipPay Android HCE — NFC launch + merchant receipt
 
-A tiny Android merchant app that emulates an NFC card target. The buyer's iPhone taps it, reads a short payload, and enters the existing ColdTap checkout flow (prepare → Ledger sign → submit-signed → XRPL).
+A small Android merchant app that emulates an NFC card target. The buyer's iPhone taps it, reads a short payload, and enters the existing RipPay checkout flow (prepare → sign → submit-signed → XRPL). The app also shows the merchant a live receipt view with an XRPL explorer link once the transaction clears.
 
-**This is not a full merchant app.** No XRPL, no signing, no dashboard. Android is the NFC launch target and nothing else. The QR path at `/s/:id` remains the primary, always-works fallback.
+**No XRPL signing here.** Android is the merchant side: NFC handoff target + receipt UI. The QR path at `/s/:id` remains the primary, always-works fallback.
+
+> The Kotlin package is `com.coldtap.hce` — retained for signing continuity across hackathon builds. The product is branded RipPay.
 
 ---
 

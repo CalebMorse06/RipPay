@@ -1,3 +1,8 @@
+// Note: the Kotlin package name `com.coldtap.hce` is retained from an earlier
+// iteration; the product is branded RipPay. Renaming would invalidate signing
+// identity and break merchants who already have the app installed, so we keep
+// the internal name.
+
 package com.coldtap.hce
 
 import android.nfc.cardemulation.HostApduService

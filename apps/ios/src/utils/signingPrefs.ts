@@ -1,3 +1,11 @@
+/**
+ * User's chosen signing backend. Two options:
+ *   'ledger' (default) — BLE + hw-app-xrp. Marquee self-custody path.
+ *   'local'            — xrpl.Wallet from a seed in the iOS Keychain, gated
+ *                        by Face ID on every signature.
+ * Persisted via AsyncStorage; read on HomeScreen focus and at ProcessingScreen
+ * mount to decide which Signer to instantiate.
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type SigningMethod = 'ledger' | 'local';
