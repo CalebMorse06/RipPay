@@ -31,20 +31,47 @@ const log: Logger = (msg, meta) => {
 /**
  * Record SUBMITTED state and kick off provider-specific progression in the
  * background. Returns immediately with the already-known tx hash.
+ *
+ * Kept for local dev and tests where the Node process lives past the response.
+ * On Vercel serverless the background work is killed when the response returns,
+ * so route handlers should call `markSubmittedOnly` + `runValidation`
+ * separately and wrap `runValidation` with `next/server`'s `after()`.
  */
 export async function submitSignedBlob(args: {
   sessionId: string;
   txBlob: string;
   txHash: string;
 }): Promise<void> {
-  await markSubmitted(args.sessionId, args.txHash);
+  await markSubmittedOnly(args.sessionId, args.txHash);
 
   if (getXrplMode() === "mock") {
-    scheduleMockProgression(args.sessionId);
+    void runMockProgression(args.sessionId);
     return;
   }
 
   void submitReal(args.sessionId, args.txBlob, args.txHash);
+}
+
+/** Synchronous half: update Redis to SUBMITTED so pollers see immediate progress. */
+export async function markSubmittedOnly(sessionId: string, txHash: string): Promise<void> {
+  await markSubmitted(sessionId, txHash);
+}
+
+/**
+ * Async half: submit the blob to XRPL and poll for validation. Awaitable so
+ * route handlers can pass it to `after()` and extend the Vercel function
+ * lifetime past the response. Returns when PAID, FAILED, or the deadline hits.
+ */
+export async function runValidation(args: {
+  sessionId: string;
+  txBlob: string;
+  txHash: string;
+}): Promise<void> {
+  if (getXrplMode() === "mock") {
+    await runMockProgression(args.sessionId);
+    return;
+  }
+  await submitReal(args.sessionId, args.txBlob, args.txHash);
 }
 
 async function submitReal(sessionId: string, txBlob: string, txHash: string): Promise<void> {
@@ -125,14 +152,14 @@ async function trackValidation(
   await markFailed(sessionId, "validation timeout");
 }
 
-function scheduleMockProgression(sessionId: string) {
-  setTimeout(() => void markValidating(sessionId), 1200);
-  setTimeout(async () => {
-    const current = await sessionStore.get(sessionId);
-    if (current && current.status === "VALIDATING" && current.txHash) {
-      await markPaid(sessionId, current.txHash);
-    }
-  }, 3200);
+async function runMockProgression(sessionId: string): Promise<void> {
+  await new Promise((r) => setTimeout(r, 1200));
+  await markValidating(sessionId);
+  await new Promise((r) => setTimeout(r, 2000));
+  const current = await sessionStore.get(sessionId);
+  if (current && current.status === "VALIDATING" && current.txHash) {
+    await markPaid(sessionId, current.txHash);
+  }
 }
 
 async function markSubmitted(sessionId: string, txHash: string): Promise<Session | undefined> {

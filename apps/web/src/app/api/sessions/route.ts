@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
+import { isValidClassicAddress } from "xrpl";
 import { CreateSessionSchema, type Session } from "@coldtap/shared";
 import { sessionStore } from "@/server/store";
 import { sessionEvents } from "@/server/events";
@@ -20,6 +21,17 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", issues: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  // Format regex can't catch base58check typos — verify the trailing checksum
+  // so `xrpl.encode()` never throws `checksum_invalid` during signing.
+  if (!isValidClassicAddress(parsed.data.destinationAddress)) {
+    return NextResponse.json(
+      {
+        error: "destinationAddress has an invalid checksum. Double-check the r-address — a single mistyped character will pass the format check but fail here.",
+      },
       { status: 400 },
     );
   }

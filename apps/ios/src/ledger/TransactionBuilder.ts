@@ -15,8 +15,19 @@
  * If xrpl import fails, use: import { encode, decode } from 'ripple-binary-codec'
  */
 
-import {encode, decode} from 'xrpl';
+import {encode, decode, isValidClassicAddress} from 'xrpl';
 import {XrplUnsignedTransaction} from '@coldtap/shared';
+
+function assertValidAddress(role: 'Account' | 'Destination', addr: unknown): void {
+  if (typeof addr !== 'string' || !isValidClassicAddress(addr)) {
+    const shown = typeof addr === 'string' ? addr : String(addr);
+    throw new Error(
+      role === 'Destination'
+        ? `Merchant's XRPL address is invalid (${shown}). Ask them to re-enter it on the checkout form.`
+        : `Your Ledger returned an invalid XRPL address (${shown}). Re-open the XRP app on the Ledger and try again.`,
+    );
+  }
+}
 
 /** Build the signing hex: complete raw tx (without TxnSignature) encoded to hex */
 export function encodeForSigning(
@@ -33,6 +44,9 @@ export function encodeForSigning(
 
   // Defensive: remove any leftover signature fields
   delete tx.TxnSignature;
+
+  assertValidAddress('Account', tx.Account);
+  assertValidAddress('Destination', tx.Destination);
 
   const hex = encode(tx as any);
   __DEV__ && console.log('[TransactionBuilder] encodeForSigning:', JSON.stringify(tx, null, 2));
@@ -52,6 +66,9 @@ export function buildSignedBlob(
     SigningPubKey: buyerPublicKey.toUpperCase(),
     TxnSignature: signatureHex.toUpperCase(),
   };
+
+  assertValidAddress('Account', signedTx.Account);
+  assertValidAddress('Destination', signedTx.Destination);
 
   const blob = encode(signedTx as any);
   __DEV__ && console.log('[TransactionBuilder] buildSignedBlob txHash preview available after submission');

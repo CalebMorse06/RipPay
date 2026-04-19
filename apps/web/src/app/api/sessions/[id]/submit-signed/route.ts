@@ -1,8 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { SubmitSignedSchema, type SubmitSignedResponse } from "@coldtap/shared";
 import { sessionStore } from "@/server/store";
 import { sessionEvents } from "@/server/events";
-import { hashSignedBlob, submitSignedBlob, verifySignedBlob } from "@/server/xrpl";
+import {
+  hashSignedBlob,
+  markSubmittedOnly,
+  runValidation,
+  verifySignedBlob,
+} from "@/server/xrpl";
+
+// XRPL validation polls the network for up to 60s. Vercel would otherwise
+// freeze the function the moment the response returns, leaving the session
+// stuck on SUBMITTED. `after()` keeps the worker alive until this deadline.
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 /**
  * POST /api/sessions/:id/submit-signed
@@ -90,7 +101,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   try {
-    await submitSignedBlob({ sessionId: id, txBlob: parsed.data.txBlob, txHash });
+    await markSubmittedOnly(id, txHash);
   } catch (err) {
     return NextResponse.json(
       {
@@ -100,6 +111,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       { status: 502 },
     );
   }
+
+  // Kick off XRPL submit + validation tracking AFTER the response returns.
+  // Vercel keeps the function warm until this promise settles (or maxDuration).
+  after(async () => {
+    try {
+      await runValidation({ sessionId: id, txBlob: parsed.data.txBlob, txHash });
+    } catch (err) {
+      console.error("[submit-signed] runValidation threw", err);
+    }
+  });
 
   const response: SubmitSignedResponse = { txHash, status: "SUBMITTED" };
   return NextResponse.json(response);

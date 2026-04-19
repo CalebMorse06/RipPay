@@ -1,9 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { SubmitSignedSchema, type SubmitSignedResponse } from "@coldtap/shared";
 import { sessionStore, TERMINAL_STATUSES } from "@/server/store";
 import { sessionEvents } from "@/server/events";
 import { getXrplMode } from "@/server/config";
-import { hashSignedBlob, submitSignedBlob, verifySignedBlob } from "@/server/xrpl";
+import {
+  hashSignedBlob,
+  markSubmittedOnly,
+  runValidation,
+  verifySignedBlob,
+} from "@/server/xrpl";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 /**
  * Legacy submit endpoint — prefer POST /api/sessions/:id/submit-signed.
@@ -70,7 +78,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   try {
-    await submitSignedBlob({ sessionId: id, txBlob: parsed.data.txBlob, txHash });
+    await markSubmittedOnly(id, txHash);
   } catch (err) {
     return NextResponse.json(
       {
@@ -80,6 +88,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       { status: 502 },
     );
   }
+
+  after(async () => {
+    try {
+      await runValidation({ sessionId: id, txBlob: parsed.data.txBlob, txHash });
+    } catch (err) {
+      console.error("[submit] runValidation threw", err);
+    }
+  });
 
   const response: SubmitSignedResponse = { txHash, status: "SUBMITTED" };
   return NextResponse.json(response);
