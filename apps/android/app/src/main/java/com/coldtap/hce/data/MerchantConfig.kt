@@ -3,6 +3,7 @@ package com.coldtap.hce.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -58,12 +59,20 @@ class MerchantConfigRepository(context: Context) {
         }
     }
 
+    /** True once the user has dismissed the first-launch onboarding pitch. */
+    suspend fun isOnboarded(): Boolean = store.data.first()[KEY_ONBOARDED] ?: false
+
+    suspend fun markOnboarded() {
+        store.edit { it[KEY_ONBOARDED] = true }
+    }
+
     companion object {
         const val DEFAULT_BASE_URL = "https://coldtap-web.vercel.app"
 
         private val KEY_MERCHANT_NAME = stringPreferencesKey("merchant_name")
         private val KEY_DESTINATION_ADDRESS = stringPreferencesKey("destination_address")
         private val KEY_BASE_URL = stringPreferencesKey("base_url")
+        private val KEY_ONBOARDED = booleanPreferencesKey("onboarded")
 
         @Volatile
         private var instance: MerchantConfigRepository? = null

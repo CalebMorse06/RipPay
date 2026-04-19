@@ -1,35 +1,262 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/bg_primary"
-    android:padding="20dp">
+    android:fillViewport="true">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/settings_title"
-        android:textColor="@color/text_primary"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="24dp" />
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/editRegisterButton"
-        style="@style/Widget.ColdTap.SecondaryButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/setup_title" />
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/debugButton"
-        style="@style/Widget.ColdTap.SecondaryButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/settings_debug" />
+            <ImageButton
+                android:id="@+id/backButton"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_back"
+                android:src="@drawable/ic_back"
+                app:tint="@color/text_primary" />
 
-</LinearLayout>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="40dp"
+                android:gravity="center"
+                android:text="@string/settings_title"
+                android:textAppearance="@style/TextAppearance.ColdTap.Title" />
+        </LinearLayout>
+
+        <!-- ===== REGISTER section ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="10dp"
+            android:text="@string/settings_section_register"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.14"
+            android:fontFamily="sans-serif-medium" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_label_shop"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12" />
+
+            <TextView
+                android:id="@+id/shopNameText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:fontFamily="sans-serif-medium"
+                tools:text="Cold Brew Co." />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="14dp"
+                android:background="@color/divider" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_label_destination"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/destinationText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:maxLines="1"
+                    android:ellipsize="middle"
+                    tools:text="rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH" />
+
+                <ImageButton
+                    android:id="@+id/copyDestinationButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginStart="6dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cd_copy"
+                    android:src="@drawable/ic_copy"
+                    app:tint="@color/text_secondary" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="14dp"
+                android:background="@color/divider" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_label_backend"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <View
+                    android:id="@+id/networkDot"
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_live_dot"
+                    android:backgroundTint="@color/text_tertiary" />
+
+                <TextView
+                    android:id="@+id/baseUrlText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="monospace"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:maxLines="1"
+                    android:ellipsize="middle"
+                    tools:text="https://coldtap-web.vercel.app" />
+
+                <TextView
+                    android:id="@+id/networkStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.12"
+                    android:fontFamily="sans-serif-medium"
+                    tools:text="Live" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/editRegisterButton"
+            style="@style/Widget.ColdTap.SecondaryButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/settings_edit_register" />
+
+        <!-- ===== ABOUT section ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:layout_marginBottom="10dp"
+            android:text="@string/settings_section_about"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.14"
+            android:fontFamily="sans-serif-medium" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="20dp"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="60dp"
+                android:src="@drawable/brand_lockup"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/cd_brand_mark" />
+
+            <TextView
+                android:id="@+id/versionText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="v0.1.0" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="@string/settings_powered_by"
+                android:textColor="@color/text_tertiary"
+                android:textSize="11sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.18" />
+        </LinearLayout>
+
+        <!-- ===== ADVANCED section ===== -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:layout_marginBottom="10dp"
+            android:text="@string/settings_section_advanced"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.14"
+            android:fontFamily="sans-serif-medium" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/debugButton"
+            style="@style/Widget.ColdTap.SecondaryButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/settings_debug" />
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="24dp" />
+
+    </LinearLayout>
+</ScrollView>

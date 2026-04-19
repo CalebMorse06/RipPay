@@ -40,6 +40,10 @@ class ReceiptActivity : AppCompatActivity() {
         val txHash = intent.getStringExtra(EXTRA_TX_HASH).orEmpty()
         val paidAtIso = intent.getStringExtra(EXTRA_PAID_AT).orEmpty()
         val network = intent.getStringExtra(EXTRA_NETWORK).orEmpty()
+        val amountDrops = intent.getStringExtra(EXTRA_AMOUNT_DROPS).orEmpty()
+
+        // Record this payment in the local "Today" counter — drives the Home pill.
+        if (amountDrops.isNotBlank()) DailyStats.recordPaid(this, amountDrops)
 
         binding.amountText.text = amount
         binding.merchantText.text = merchant
@@ -60,8 +64,10 @@ class ReceiptActivity : AppCompatActivity() {
         if (explorerUrl != null) {
             binding.explorerLink.visibility = View.VISIBLE
             binding.explorerLink.setOnClickListener { openUrl(explorerUrl) }
+            binding.verifiedBadge.visibility = View.VISIBLE
         } else {
             binding.explorerLink.visibility = View.GONE
+            binding.verifiedBadge.visibility = View.GONE
         }
 
         binding.backButton.setOnClickListener { finish() }
@@ -117,5 +123,6 @@ class ReceiptActivity : AppCompatActivity() {
         const val EXTRA_TX_HASH = "tx_hash"
         const val EXTRA_PAID_AT = "paid_at"
         const val EXTRA_NETWORK = "network"
+        const val EXTRA_AMOUNT_DROPS = "amount_drops"
     }
 }

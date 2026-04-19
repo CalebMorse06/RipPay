@@ -3,6 +3,17 @@
     <string name="app_name">RipPay</string>
     <string name="service_description">RipPay checkout launch target</string>
     <string name="aid_group_description">RipPay session handoff</string>
+    <string name="brand_name">RipPay</string>
+    <string name="brand_tagline">Self-custody payments at the register.</string>
+    <string name="cd_brand_mark">RipPay logo</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_tagline">Take crypto payments in person.\nBuyers sign on their own hardware.</string>
+    <string name="onboarding_pillar_1">Self-custody — RipPay never holds your funds</string>
+    <string name="onboarding_pillar_2">Settles on XRPL in seconds</string>
+    <string name="onboarding_pillar_3">No card networks. No middlemen. No 3% fees.</string>
+    <string name="onboarding_cta">Set up your register</string>
+    <string name="onboarding_xrpl_footer">Powered by XRPL</string>
 
     <!-- Setup / first-run screen -->
     <string name="setup_title">Set up your register</string>
@@ -28,9 +39,8 @@
     <string name="home_error_zero">Enter an amount</string>
     <string name="home_error_network">Couldn\'t reach backend. Check your connection.</string>
     <string name="home_error_generic">Couldn\'t create the payment.</string>
-    <string name="home_tab_keypad">Keypad</string>
-    <string name="home_tab_library">Library</string>
-    <string name="home_tab_favourites">Favourites</string>
+    <string name="home_today_format">Today · %1$d · %2$s XRP</string>
+    <string name="home_today_zero">Ready for first sale</string>
     <string name="home_add_note">Note</string>
     <string name="home_charge">Charge %1$s XRP</string>
     <string name="home_charge_zero">Charge 0 XRP</string>
@@ -42,7 +52,7 @@
 
     <!-- Tap-ready / status screen -->
     <string name="tap_ready_title">Tap to Pay</string>
-    <string name="tap_ready_hint">Hold the buyer\'s iPhone to the back of this phone.</string>
+    <string name="tap_ready_hint">Buyer signs on their own hardware. No middleman. Settles on XRPL in seconds.</string>
     <string name="tap_cancel">Cancel</string>
     <string name="tap_done">Next customer</string>
     <string name="tap_retry">Try again</string>
@@ -53,7 +63,9 @@
     <string name="qr_dialog_close">Close</string>
     <string name="live_label_ok">Live</string>
     <string name="live_label_offline">Offline</string>
-    <string name="receipt_view_explorer">View on XRPL Explorer</string>
+    <string name="receipt_view_explorer">View on XRPL Explorer ↗</string>
+    <string name="receipt_verified_xrpl">Verified on XRPL</string>
+    <string name="receipt_brand_footer">Powered by RipPay · XRPL</string>
 
     <!-- Receipt / Paid screen -->
     <string name="receipt_title">Receipt</string>
@@ -78,9 +90,22 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
-    <string name="settings_debug">Advanced / debug</string>
+    <string name="settings_debug">Advanced · NFC + payload diagnostics</string>
     <string name="settings_save">Save</string>
     <string name="settings_saved">Settings saved</string>
+    <string name="settings_section_register">Register</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_label_shop">Shop name</string>
+    <string name="settings_label_destination">Receiving address</string>
+    <string name="settings_label_backend">Backend</string>
+    <string name="settings_edit_register">Edit register details</string>
+    <string name="settings_powered_by">Powered by XRPL</string>
+    <string name="settings_version_format">v%1$s</string>
+    <string name="settings_network_live">Live</string>
+    <string name="settings_network_offline">Offline</string>
+    <string name="settings_network_checking">Checking…</string>
+    <string name="settings_copied">Copied</string>
 
     <!-- Legacy spike UI (kept on debug screen) -->
     <string name="title">RipPay Merchant</string>

@@ -5,7 +5,7 @@
     <!-- Themes                                                               -->
     <!-- ================================================================== -->
 
-    <!-- Default app theme — light, Square-blue accent. -->
+    <!-- Default app theme — light, RipPay royal-blue accent. -->
     <style name="Theme.ColdTap" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/accent</item>
         <item name="colorOnPrimary">@color/text_on_accent</item>
@@ -28,6 +28,12 @@
         <item name="android:textColor">@color/text_primary</item>
 
         <item name="materialButtonStyle">@style/Widget.ColdTap.PrimaryButton</item>
+
+        <!-- Android 12+ splash API. White background + RP mark. On older APIs
+             these attributes are ignored and the system falls back to the
+             regular launcher icon during cold start. -->
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/bg_primary</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/brand_mark</item>
     </style>
 
     <!-- Dark theme for the Receipt / Paid screen only. -->
@@ -153,6 +159,7 @@
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
         <item name="android:textAppearance">@style/TextAppearance.ColdTap.KeypadKey</item>
+        <item name="android:textColor">@color/text_primary</item>
         <item name="android:textAllCaps">false</item>
         <item name="backgroundTint">@color/bg_primary</item>
         <item name="cornerRadius">0dp</item>

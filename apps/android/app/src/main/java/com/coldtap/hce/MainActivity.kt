@@ -61,7 +61,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        refreshTodayStats()
         lifecycleScope.launch {
+            // First-launch routing: onboarding pitch → setup → home.
+            if (!repo.isOnboarded()) {
+                startActivity(Intent(this@MainActivity, OnboardingActivity::class.java))
+                finish()
+                return@launch
+            }
             val config = repo.current()
             if (!config.isConfigured) {
                 startActivity(Intent(this@MainActivity, SetupActivity::class.java))
@@ -70,6 +77,15 @@ class MainActivity : AppCompatActivity() {
             }
             currentConfig = config
             api = SessionApiFactory.create(config.baseUrl)
+        }
+    }
+
+    private fun refreshTodayStats() {
+        val snap = DailyStats.read(this)
+        binding.todayStats.text = if (snap.count == 0) {
+            getString(R.string.home_today_zero)
+        } else {
+            getString(R.string.home_today_format, snap.count, snap.xrpDisplay)
         }
     }
 

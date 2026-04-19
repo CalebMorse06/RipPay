@@ -256,6 +256,7 @@ class TapReadyActivity : AppCompatActivity() {
             val intent = Intent(this, ReceiptActivity::class.java).apply {
                 putExtra(ReceiptActivity.EXTRA_SESSION_ID, session.id)
                 putExtra(ReceiptActivity.EXTRA_AMOUNT_DISPLAY, session.amountDisplay)
+                putExtra(ReceiptActivity.EXTRA_AMOUNT_DROPS, session.amountDrops)
                 putExtra(ReceiptActivity.EXTRA_ITEM_NAME, session.itemName)
                 putExtra(ReceiptActivity.EXTRA_MERCHANT_NAME, session.merchantName)
                 putExtra(ReceiptActivity.EXTRA_DESTINATION, session.destinationAddress)
