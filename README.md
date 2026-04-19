@@ -289,7 +289,6 @@ RipPay today uses the core Payment pathway deeply, but there's more XRPL we coul
 
 ## Links
 
-- Live demo: [`coldtap-web.vercel.app`](https://coldtap-web.vercel.app) (testnet)
 - Sample paid transaction on testnet: [`A9BEDB…06BF1`](https://testnet.xrpl.org/transactions/A9BEDB276F0A725DE326B90BA582BC59F7F238B00903E2EECFE730E1F2706BF1) — a real RipPay checkout, signed by a Ledger Nano X, verified against its `InvoiceID = SHA256(sessionId)`, validated by rippled.
 - Demo runbook + per-flow pre-flight: [`DEMO.md`](./DEMO.md)
 - iOS buyer app details: [`apps/ios/README.md`](./apps/ios/README.md)
