@@ -144,10 +144,10 @@ export default function ProcessingScreen({navigation, route}: Props) {
         ({address, publicKey} = await getXrplAccount(transport));
       }
 
-      // ── Step 6: Build unsigned transaction (fallback path) ─────────────────
+      // ── Step 6: Build unsigned transaction ─────────────────────────────────
       setBuyerStep('building_tx');
       if (unsignedTx === null) {
-        // Backend /prepare not available — build client-side
+        // Backend /prepare not available — build client-side from session data.
         const session = await getSession(sessionId);
         const networkParams = await fetchNetworkParams(address);
         unsignedTx = buildUnsignedTxFromSession({
@@ -156,6 +156,20 @@ export default function ProcessingScreen({navigation, route}: Props) {
           memo: session.memo,
           ...networkParams,
         });
+      } else if (
+        typeof unsignedTx.Sequence !== 'number' ||
+        typeof unsignedTx.LastLedgerSequence !== 'number'
+      ) {
+        // Backend returned the canonical tx but didn't autofill Sequence /
+        // LastLedgerSequence (it only does when sent the account, which we
+        // don't have at prepare-time). Autofill from XRPL before signing.
+        const params = await fetchNetworkParams(address);
+        unsignedTx = {
+          ...unsignedTx,
+          Sequence: params.sequence,
+          LastLedgerSequence: params.lastLedgerSequence,
+          Fee: unsignedTx.Fee ?? params.fee,
+        };
       }
 
       const txHex = encodeForSigning(unsignedTx, address, publicKey);
