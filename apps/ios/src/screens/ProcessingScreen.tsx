@@ -1,4 +1,4 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -15,25 +15,18 @@ import {
   updateSessionStatus,
   prepareSession,
   submitSignedBlob,
+  waitForFinalStatus,
   extractApiErrorMessage,
   ApiError,
 } from '../api/sessions';
-import {
-  findFirstLedgerDevice,
-  openTransport,
-  closeTransport,
-} from '../ledger/LedgerTransport';
-import {getXrplAccount, signXrplTransaction} from '../ledger/XrplSigner';
-import {
-  encodeForSigning,
-  buildSignedBlob,
-  buildUnsignedTxFromSession,
-} from '../ledger/TransactionBuilder';
+import {buildUnsignedTxFromSession} from '../ledger/TransactionBuilder';
 import {fetchNetworkParams} from '../ledger/xrplNetwork';
-import {consumePrewarm} from '../ledger/LedgerSession';
 import type {XrplUnsignedTransaction, PrepareSessionResponse} from '@coldtap/shared';
 import {Colors, Typography, Radius} from '../theme';
 import {saveTx} from '../utils/txHistory';
+import {getActiveSigner} from '../signing/getSigner';
+import type {Signer} from '../signing/Signer';
+import {getSigningMethod, type SigningMethod} from '../utils/signingPrefs';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Processing'>;
 
@@ -45,8 +38,10 @@ const STEP_LABELS: Record<BuyerStep, string> = {
   fetching_account: 'Reading your XRPL account…',
   building_tx: 'Building transaction…',
   awaiting_confirmation: 'Confirm on your Ledger',
+  unlocking_wallet: 'Approve with Face ID…',
   signing: 'Signing…',
   submitting: 'Submitting to XRPL…',
+  validating: 'Confirming on XRPL…',
   done: 'Complete',
   error: 'Something went wrong',
 };
@@ -55,17 +50,10 @@ const STEP_SUBTEXT: Partial<Record<BuyerStep, string>> = {
   scanning_ledger: 'Make sure Bluetooth is on and the XRP app is open on your Ledger',
   connecting_ledger: 'Opening secure channel to Ledger Nano X…',
   awaiting_confirmation: 'Review the amount and destination on your Ledger,\nthen press both buttons to approve',
+  unlocking_wallet: 'iOS will ask you to approve this payment with Face ID',
   submitting: 'Your signed transaction is being broadcast to the network',
+  validating: 'Waiting for the XRPL ledger to include your payment — this usually takes a few seconds',
 };
-
-// Steps shown in the progress dots
-const PROGRESS_STEPS: BuyerStep[] = [
-  'scanning_ledger',
-  'fetching_account',
-  'building_tx',
-  'awaiting_confirmation',
-  'submitting',
-];
 
 const STEP_ORDER: BuyerStep[] = [
   'idle',
@@ -75,8 +63,10 @@ const STEP_ORDER: BuyerStep[] = [
   'fetching_account',
   'building_tx',
   'awaiting_confirmation',
+  'unlocking_wallet',
   'signing',
   'submitting',
+  'validating',
   'done',
 ];
 
@@ -85,7 +75,25 @@ export default function ProcessingScreen({navigation, route}: Props) {
   const {buyerStep, buyerError, setBuyerStep, setBuyerError, reset} =
     useSessionStore();
   const ran = useRef(false);
-  const transportRef = useRef<any>(null);
+  const signerRef = useRef<Signer | null>(null);
+  const [progressSteps, setProgressSteps] = useState<BuyerStep[]>([
+    'scanning_ledger',
+    'fetching_account',
+    'building_tx',
+    'awaiting_confirmation',
+    'submitting',
+    'validating',
+  ]);
+  const [validatingSlow, setValidatingSlow] = useState(false);
+
+  useEffect(() => {
+    if (buyerStep !== 'validating') {
+      setValidatingSlow(false);
+      return;
+    }
+    const t = setTimeout(() => setValidatingSlow(true), 30_000);
+    return () => clearTimeout(t);
+  }, [buyerStep]);
 
   useEffect(() => {
     if (ran.current) return;
@@ -93,20 +101,27 @@ export default function ProcessingScreen({navigation, route}: Props) {
     runPaymentFlow();
 
     return () => {
-      closeTransport(transportRef.current).catch(() => {});
+      signerRef.current?.cleanup().catch(() => {});
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function runPaymentFlow() {
     let unsignedTx: XrplUnsignedTransaction | null = null;
+    let signingMethod: SigningMethod = 'ledger';
 
     try {
-      // ── Step 1: Mark session awaiting signature ────────────────────────────
+      // ── Step 1: Pick a signer and advertise its progress steps ─────────────
+      const signer = await getActiveSigner();
+      signerRef.current = signer;
+      signingMethod = await getSigningMethod();
+      setProgressSteps(signer.progressSteps());
+
+      // ── Step 2: Mark session awaiting signature ────────────────────────────
       setBuyerStep('preparing_payment');
       await updateSessionStatus(sessionId, 'AWAITING_SIGNATURE');
 
-      // ── Step 2: Get unsigned transaction from backend ──────────────────────
+      // ── Step 3: Get unsigned transaction from backend ──────────────────────
       let preparePayload: PrepareSessionResponse | null = null;
       try {
         preparePayload = await prepareSession(sessionId);
@@ -119,35 +134,12 @@ export default function ProcessingScreen({navigation, route}: Props) {
         }
       }
 
-      // ── Steps 3–5: Use pre-warmed transport if available ───────────────────
-      const prewarm = consumePrewarm();
-      let transport: any;
-      let address: string;
-      let publicKey: string;
+      // ── Step 4: Acquire signing identity (BLE scan or Face ID) ─────────────
+      const {address, publicKey} = await signer.prepare(setBuyerStep);
 
-      if (prewarm.transport && prewarm.account) {
-        // Fast path: CheckoutScreen already scanned, connected, and fetched account
-        transport = prewarm.transport;
-        address = prewarm.account.address;
-        publicKey = prewarm.account.publicKey;
-        transportRef.current = transport;
-      } else {
-        // Slow path: full BLE scan → connect → read account
-        setBuyerStep('scanning_ledger');
-        const device = await findFirstLedgerDevice();
-
-        setBuyerStep('connecting_ledger');
-        transport = await openTransport(device);
-        transportRef.current = transport;
-
-        setBuyerStep('fetching_account');
-        ({address, publicKey} = await getXrplAccount(transport));
-      }
-
-      // ── Step 6: Build unsigned transaction ─────────────────────────────────
+      // ── Step 5: Build / autofill unsigned transaction ──────────────────────
       setBuyerStep('building_tx');
       if (unsignedTx === null) {
-        // Backend /prepare not available — build client-side from session data.
         const session = await getSession(sessionId);
         const networkParams = await fetchNetworkParams(address);
         unsignedTx = buildUnsignedTxFromSession({
@@ -160,9 +152,6 @@ export default function ProcessingScreen({navigation, route}: Props) {
         typeof unsignedTx.Sequence !== 'number' ||
         typeof unsignedTx.LastLedgerSequence !== 'number'
       ) {
-        // Backend returned the canonical tx but didn't autofill Sequence /
-        // LastLedgerSequence (it only does when sent the account, which we
-        // don't have at prepare-time). Autofill from XRPL before signing.
         const params = await fetchNetworkParams(address);
         unsignedTx = {
           ...unsignedTx,
@@ -172,54 +161,66 @@ export default function ProcessingScreen({navigation, route}: Props) {
         };
       }
 
-      const txHex = encodeForSigning(unsignedTx, address, publicKey);
+      // ── Step 6: Sign ───────────────────────────────────────────────────────
+      const signedBlob = await signer.sign(unsignedTx, address, publicKey, setBuyerStep);
 
-      // ── Step 7: User approves on Ledger ────────────────────────────────────
-      setBuyerStep('awaiting_confirmation');
-      const signatureHex = await signXrplTransaction(transport, txHex);
-      setBuyerStep('signing'); // briefly, then submitting
-
-      // ── Step 8: Build final signed blob ───────────────────────────────────
-      const signedBlob = buildSignedBlob(unsignedTx, address, publicKey, signatureHex);
-
-      // ── Step 9: Submit to backend ──────────────────────────────────────────
+      // ── Step 7: Submit to backend ──────────────────────────────────────────
       setBuyerStep('submitting');
       const result = await submitSignedBlob(sessionId, signedBlob);
 
+      // ── Step 8: Wait for XRPL to validate ─────────────────────────────────
+      // The backend returns SUBMITTED immediately; validation runs async in an
+      // after() task. Poll until the network says PAID or FAILED — otherwise
+      // we'd show "Complete" on a tx that later fails (e.g. tecUNFUNDED).
+      setBuyerStep('validating');
+      const finalSession = await waitForFinalStatus(sessionId);
+
+      if (finalSession.status === 'FAILED') {
+        throw new ApiError(
+          'XRPL_REJECTED',
+          finalSession.failureReason
+            ? `Payment rejected by XRPL: ${finalSession.failureReason}`
+            : 'Payment was rejected by the XRPL network.',
+        );
+      }
+      if (finalSession.status === 'EXPIRED') {
+        throw new ApiError('EXPIRED', 'This session expired before the payment was confirmed.');
+      }
+
       // ── Done ───────────────────────────────────────────────────────────────
-      await closeTransport(transport);
-      transportRef.current = null;
+      await signer.cleanup();
+      signerRef.current = null;
       setBuyerStep('done');
 
-      // Save to local history and gather details for success screen
-      const sessionData = await getSession(sessionId).catch(() => null);
-      if (sessionData) {
-        await saveTx({
-          txHash: result.txHash,
-          sessionId,
-          merchantName: sessionData.merchantName,
-          itemName: sessionData.itemName,
-          amountDisplay: sessionData.amountDisplay,
-          amountDrops: sessionData.amountDrops,
-          destinationAddress: sessionData.destinationAddress,
-          fiatDisplay: sessionData.fiatDisplay,
-          pricedInFiat: Boolean(sessionData.fiatAmount),
-          completedAt: new Date().toISOString(),
-        }).catch(() => {});
-      }
+      const sessionData = finalSession;
+      await saveTx({
+        txHash: result.txHash,
+        sessionId,
+        merchantName: sessionData.merchantName,
+        itemName: sessionData.itemName,
+        amountDisplay: sessionData.amountDisplay,
+        amountDrops: sessionData.amountDrops,
+        destinationAddress: sessionData.destinationAddress,
+        fiatDisplay: sessionData.fiatDisplay,
+        pricedInFiat: Boolean(sessionData.fiatAmount),
+        signedVia: signingMethod,
+        completedAt: new Date().toISOString(),
+      }).catch(() => {});
 
       navigation.replace('Success', {
         sessionId,
         txHash: result.txHash,
-        merchantName: sessionData?.merchantName,
-        itemName: sessionData?.itemName,
-        amountDisplay: sessionData?.amountDisplay,
-        fiatDisplay: sessionData?.fiatDisplay,
-        pricedInFiat: Boolean(sessionData?.fiatAmount),
+        merchantName: sessionData.merchantName,
+        itemName: sessionData.itemName,
+        amountDisplay: sessionData.amountDisplay,
+        fiatDisplay: sessionData.fiatDisplay,
+        pricedInFiat: Boolean(sessionData.fiatAmount),
+        signedVia: signingMethod,
+        network: sessionData.network,
       });
     } catch (e: unknown) {
-      await closeTransport(transportRef.current);
-      transportRef.current = null;
+      await signerRef.current?.cleanup().catch(() => {});
+      signerRef.current = null;
       setBuyerStep('error');
       setBuyerError(extractApiErrorMessage(e));
     }
@@ -231,7 +232,10 @@ export default function ProcessingScreen({navigation, route}: Props) {
   }
 
   const label = STEP_LABELS[buyerStep];
-  const subtext = STEP_SUBTEXT[buyerStep];
+  const subtext =
+    buyerStep === 'validating' && validatingSlow
+      ? 'Still confirming — XRPL is busy right now. Your transaction is broadcast; we\'re just waiting for a validator to include it.'
+      : STEP_SUBTEXT[buyerStep];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -247,7 +251,7 @@ export default function ProcessingScreen({navigation, route}: Props) {
           ) : buyerStep === 'done' ? (
             <Text style={styles.doneIcon}>✓</Text>
           ) : (
-            <ActivityIndicator size="large" color="#2563EB" />
+            <ActivityIndicator size="large" color={Colors.primary} />
           )}
         </View>
 
@@ -263,13 +267,13 @@ export default function ProcessingScreen({navigation, route}: Props) {
               <Text style={styles.errorDetail}>{buyerError}</Text>
             ) : null}
             <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-              <Text style={styles.retryButtonText}>Go Back & Retry</Text>
+              <Text style={styles.retryButtonText}>Try again</Text>
             </TouchableOpacity>
           </View>
         )}
 
         <View style={styles.progressDots}>
-          {PROGRESS_STEPS.map(step => (
+          {progressSteps.map(step => (
             <ProgressDot key={step} step={step} current={buyerStep} />
           ))}
         </View>

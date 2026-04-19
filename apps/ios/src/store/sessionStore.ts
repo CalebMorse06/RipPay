@@ -11,8 +11,10 @@ export type BuyerStep =
   | 'fetching_account'
   | 'building_tx'
   | 'awaiting_confirmation'
+  | 'unlocking_wallet'
   | 'signing'
   | 'submitting'
+  | 'validating'
   | 'done'
   | 'error';
 

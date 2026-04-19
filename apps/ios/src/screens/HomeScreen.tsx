@@ -19,6 +19,7 @@ import {useSessionStore} from '../store/sessionStore';
 import {parseLinkIntent} from '../utils/linkParser';
 import {readMerchantPayload, humanizeNFCError} from '../nfc/MerchantNFCReader';
 import {loadHistory, timeAgo, type TxRecord} from '../utils/txHistory';
+import {getSigningMethod, type SigningMethod} from '../utils/signingPrefs';
 import {Colors, Typography, Radius, Shadow} from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -30,6 +31,7 @@ export default function HomeScreen({navigation}: Props) {
   const [nfcError, setNfcError] = useState<string | null>(null);
   const [qrVisible, setQrVisible] = useState(false);
   const [history, setHistory] = useState<TxRecord[]>([]);
+  const [signingMethod, setSigningMethodState] = useState<SigningMethod>('ledger');
   const reset = useSessionStore(s => s.reset);
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function HomeScreen({navigation}: Props) {
   useFocusEffect(
     useCallback(() => {
       loadHistory().then(setHistory);
+      getSigningMethod().then(setSigningMethodState).catch(() => {});
     }, []),
   );
 
@@ -100,8 +103,18 @@ export default function HomeScreen({navigation}: Props) {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>RipPay</Text>
-          <Text style={styles.tagline}>Tap. Sign. Settle.</Text>
+          <View style={styles.headerSpacer} />
+          <View style={styles.headerCenter}>
+            <Text style={styles.logo}>RipPay</Text>
+            <Text style={styles.tagline}>Tap. Sign. Settle.</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => navigation.navigate('Settings')}
+            accessibilityLabel="Settings"
+            activeOpacity={0.7}>
+            <Text style={styles.settingsIcon}>⚙</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Primary CTA — Tap to Pay */}
@@ -197,7 +210,11 @@ export default function HomeScreen({navigation}: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>🔒 Ledger-secured · Settled on XRPL</Text>
+        <Text style={styles.footerText}>
+          {signingMethod === 'local'
+            ? '🔒 Face ID signed · Settled on XRPL'
+            : '🔒 Ledger-secured · Settled on XRPL'}
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -279,7 +296,28 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 16,
   },
-  header: {alignItems: 'center', paddingVertical: 16},
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+  },
+  headerSpacer: {width: 40},
+  headerCenter: {alignItems: 'center', flex: 1},
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  settingsIcon: {
+    fontSize: 20,
+    color: Colors.textSecondary,
+  },
   logo: {
     fontSize: Typography.xxl,
     fontWeight: Typography.heavy,

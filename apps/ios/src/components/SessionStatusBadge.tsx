@@ -6,7 +6,7 @@ import {Typography, Radius} from '../theme';
 const STATUS_CONFIG: Record<SessionStatus, {label: string; color: string; bg: string; border: string}> = {
   CREATED:            {label: 'New',               color: '#6B7280', bg: '#F3F4F6', border: '#E5E7EB'},
   AWAITING_BUYER:     {label: 'Waiting for you',   color: '#2176AE', bg: '#EBF5FC', border: '#BFDBFE'},
-  AWAITING_SIGNATURE: {label: 'Sign on Ledger',    color: '#D97706', bg: '#FFFBEB', border: '#FDE68A'},
+  AWAITING_SIGNATURE: {label: 'Awaiting signature', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A'},
   SUBMITTED:          {label: 'Submitted',          color: '#059669', bg: '#ECFDF5', border: '#A7F3D0'},
   VALIDATING:         {label: 'Confirming',         color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE'},
   PAID:               {label: 'Paid',               color: '#059669', bg: '#ECFDF5', border: '#6EE7B7'},

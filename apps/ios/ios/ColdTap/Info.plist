@@ -37,6 +37,8 @@
 	<string>ColdTap uses Bluetooth to connect to your Ledger hardware wallet.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>ColdTap uses the camera to scan payment QR codes.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>RipPay uses Face ID to approve payments signed on this device.</string>
 	<key>NFCReaderUsageDescription</key>
 	<string>ColdTap reads NFC tags to receive payment session information from the merchant.</string>
 	<key>com.apple.developer.nfc.readersession.formats</key>

@@ -7,24 +7,30 @@ export function TxLink({
   hash: string;
   network?: NetworkId;
 }) {
-  const href =
+  const host =
     network === "mainnet"
-      ? `https://livenet.xrpl.org/transactions/${hash}`
-      : network === "testnet"
-        ? `https://testnet.xrpl.org/transactions/${hash}`
-        : undefined;
+      ? "livenet.xrpl.org"
+      : network === "devnet"
+        ? "devnet.xrpl.org"
+        : network === "testnet"
+          ? "testnet.xrpl.org"
+          : undefined;
 
-  if (!href) {
+  if (!host) {
     return <span className="break-all font-mono text-xs text-subtle">{hash} · mock</span>;
   }
   return (
     <a
-      href={href}
+      href={`https://${host}/transactions/${hash}`}
       target="_blank"
       rel="noreferrer"
-      className="break-all font-mono text-xs text-accent underline-offset-2 hover:underline"
+      className="group block"
     >
-      {hash}
+      <span className="block break-all font-mono text-xs text-ink group-hover:text-accent">{hash}</span>
+      <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-accent opacity-80 group-hover:opacity-100">
+        View on XRPL Explorer
+        <span aria-hidden>→</span>
+      </span>
     </a>
   );
 }

@@ -46,6 +46,7 @@
     <string name="home_charge_zero">Charge $0.00</string>
     <string name="home_charge_xrp">Charge %1$s XRP</string>
     <string name="home_charge_xrp_zero">Charge 0 XRP</string>
+    <string name="amount_with_xrp">%1$s XRP</string>
     <string name="key_clear">C</string>
     <string name="cd_backspace">Delete</string>
     <string name="cd_settings">Settings</string>
@@ -54,7 +55,7 @@
 
     <!-- Tap-ready / status screen -->
     <string name="tap_ready_title">Tap to Pay</string>
-    <string name="tap_ready_hint">Buyer signs on their own hardware. No middleman. Settles on XRPL in seconds.</string>
+    <string name="tap_ready_hint">Buyer signs on their own device. No middleman. Settles on XRPL in seconds.</string>
     <string name="tap_cancel">Cancel</string>
     <string name="tap_done">Next customer</string>
     <string name="tap_retry">Try again</string>
@@ -83,7 +84,7 @@
     <string name="receipt_no_hash">— pending —</string>
 
     <string name="status_awaiting_buyer">Waiting for buyer to tap…</string>
-    <string name="status_awaiting_signature">Buyer is approving on their Ledger…</string>
+    <string name="status_awaiting_signature">Buyer is approving the payment…</string>
     <string name="status_submitted">Broadcasting to XRPL…</string>
     <string name="status_validating">Validating on ledger…</string>
     <string name="status_paid">Paid</string>

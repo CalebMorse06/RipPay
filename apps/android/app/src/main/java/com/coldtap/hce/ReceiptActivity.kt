@@ -45,7 +45,7 @@ class ReceiptActivity : AppCompatActivity() {
         // Record this payment in the local "Today" counter — drives the Home pill.
         if (amountDrops.isNotBlank()) DailyStats.recordPaid(this, amountDrops)
 
-        binding.amountText.text = amount
+        binding.amountText.text = getString(R.string.amount_with_xrp, amount)
         binding.merchantText.text = merchant
         binding.itemText.text = item
         binding.destinationText.text = destination
@@ -92,6 +92,7 @@ class ReceiptActivity : AppCompatActivity() {
         if (txHash.isBlank()) return null
         return when (network) {
             "testnet" -> "https://testnet.xrpl.org/transactions/$txHash"
+            "devnet" -> "https://devnet.xrpl.org/transactions/$txHash"
             "mainnet" -> "https://livenet.xrpl.org/transactions/$txHash"
             else -> null // mock / unknown — no explorer
         }

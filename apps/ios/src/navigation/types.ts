@@ -12,5 +12,9 @@ export type RootStackParamList = {
     amountDisplay?: string;
     fiatDisplay?: string;
     pricedInFiat?: boolean;
+    signedVia?: 'ledger' | 'local';
+    network?: 'mainnet' | 'testnet' | 'devnet' | 'mock';
   };
+  Settings: undefined;
+  WalletSetup: undefined;
 };

@@ -71,6 +71,41 @@ export async function submitSignedBlob(
   }
 }
 
+/**
+ * Wait for a terminal status (PAID, FAILED, or EXPIRED). Polls getSession on an
+ * interval. Resolves with the final session or throws if timeout is reached.
+ */
+export async function waitForFinalStatus(
+  id: string,
+  opts: {timeoutMs?: number; intervalMs?: number} = {},
+): Promise<Session> {
+  const timeoutMs = opts.timeoutMs ?? 60_000;
+  const intervalMs = opts.intervalMs ?? 1500;
+  const deadline = Date.now() + timeoutMs;
+  let lastErr: unknown = null;
+  while (Date.now() < deadline) {
+    try {
+      const session = await getSession(id);
+      if (
+        session.status === 'PAID' ||
+        session.status === 'FAILED' ||
+        session.status === 'EXPIRED'
+      ) {
+        return session;
+      }
+      lastErr = null;
+    } catch (e) {
+      lastErr = e;
+    }
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  if (lastErr) throw lastErr;
+  throw new ApiError(
+    'VALIDATION_TIMEOUT',
+    'XRPL did not confirm the transaction in time. Check the transaction hash on the explorer.',
+  );
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly code: string,

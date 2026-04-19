@@ -38,7 +38,13 @@ export default async function BuyerLaunchPage({
           </div>
           <div className="text-right">
             <div className="text-xs uppercase tracking-widest text-subtle">Amount</div>
-            <div className="text-2xl font-semibold tracking-tight">{session.amountDisplay}</div>
+            <div className="text-2xl font-semibold tracking-tight">
+              {session.amountDisplay}
+              <span className="ml-1 text-sm font-medium text-subtle">XRP</span>
+            </div>
+            {session.fiatDisplay ? (
+              <div className="text-xs text-subtle">≈ {session.fiatDisplay}</div>
+            ) : null}
           </div>
         </div>
         <div className="mt-3 text-sm text-subtle">{session.itemName}</div>

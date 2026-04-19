@@ -8,6 +8,8 @@ import MerchantLanding from '../screens/MerchantLanding';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import ProcessingScreen from '../screens/ProcessingScreen';
 import SuccessScreen from '../screens/SuccessScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import WalletSetupScreen from '../screens/WalletSetupScreen';
 import {canonicalizeUrl} from '../utils/linkParser';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -95,6 +97,16 @@ export default function AppNavigator() {
           name="Success"
           component={SuccessScreen}
           options={{title: 'Paid', headerBackVisible: false}}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="WalletSetup"
+          component={WalletSetupScreen}
+          options={{headerShown: false}}
         />
       </Stack.Navigator>
     </NavigationContainer>

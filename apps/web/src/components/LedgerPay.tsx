@@ -142,7 +142,11 @@ export function LedgerPay({ initial }: { initial: Session }) {
         <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">You pay</div>
         <div className="mt-1 text-5xl font-bold tracking-tight leading-none">
           {session.amountDisplay}
+          <span className="ml-2 text-2xl font-semibold text-subtle">XRP</span>
         </div>
+        {session.fiatDisplay ? (
+          <div className="mt-1 text-sm text-subtle">≈ {session.fiatDisplay}</div>
+        ) : null}
         <div className="mt-3 flex items-baseline justify-between gap-4">
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">Merchant</div>
@@ -193,15 +197,19 @@ export function LedgerPay({ initial }: { initial: Session }) {
 
           {phase === "paired" && <Button onClick={onPay}>Approve payment on Ledger</Button>}
 
-          {phase === "preparing" && <Notice tone="info">Asking backend for unsigned transaction…</Notice>}
+          {phase === "preparing" && (
+            <Notice tone="info"><Spinner /> Asking backend for unsigned transaction…</Notice>
+          )}
           {phase === "signing" && (
             <Notice tone="info">
               Approve on your Ledger Nano X. Verify merchant, amount, and destination on-device.
             </Notice>
           )}
-          {phase === "submitting" && <Notice tone="info">Submitting to XRPL…</Notice>}
+          {phase === "submitting" && (
+            <Notice tone="info"><Spinner /> Submitting to XRPL…</Notice>
+          )}
           {phase === "awaiting-validation" && (
-            <Notice tone="info">Awaiting ledger validation (typically 3–5 seconds)…</Notice>
+            <Notice tone="info"><Spinner /> Awaiting ledger validation (typically 3–5 seconds)…</Notice>
           )}
         </div>
       )}
@@ -281,6 +289,15 @@ function Notice({
     error: "border-danger/30 bg-danger/10 text-danger",
   };
   return (
-    <div className={`rounded-xl border p-4 text-sm font-medium ${styles[tone]}`}>{children}</div>
+    <div className={`rounded-xl border p-4 text-sm font-medium flex items-center gap-2 ${styles[tone]}`}>{children}</div>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-3.5 w-3.5 flex-none animate-spin rounded-full border-2 border-current border-t-transparent"
+      aria-hidden
+    />
   );
 }

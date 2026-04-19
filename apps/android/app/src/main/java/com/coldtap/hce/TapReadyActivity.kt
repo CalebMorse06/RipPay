@@ -84,7 +84,7 @@ class TapReadyActivity : AppCompatActivity() {
         itemName = intent.getStringExtra(EXTRA_ITEM_NAME).orEmpty()
         destination = intent.getStringExtra(EXTRA_DESTINATION).orEmpty()
 
-        binding.amountText.text = amountDisplay
+        binding.amountText.text = getString(R.string.amount_with_xrp, amountDisplay)
         binding.itemText.text = itemName
 
         binding.backButton.setOnClickListener { finish() }

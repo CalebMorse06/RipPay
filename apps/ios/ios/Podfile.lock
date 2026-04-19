@@ -1549,6 +1549,27 @@ PODS:
     - React-utils (= 0.75.4)
   - RNCAsyncStorage (2.2.0):
     - React-Core
+  - RNKeychain (10.0.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNPermissions (4.1.5):
     - React-Core
   - RNReactNativeHapticFeedback (2.3.4):
@@ -1684,6 +1705,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../../../node_modules/@react-native-async-storage/async-storage`)"
+  - RNKeychain (from `../../../node_modules/react-native-keychain`)
   - RNPermissions (from `../../../node_modules/react-native-permissions`)
   - RNReactNativeHapticFeedback (from `../../../node_modules/react-native-haptic-feedback`)
   - RNScreens (from `../../../node_modules/react-native-screens`)
@@ -1832,6 +1854,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../../../node_modules/@react-native-async-storage/async-storage"
+  RNKeychain:
+    :path: "../../../node_modules/react-native-keychain"
   RNPermissions:
     :path: "../../../node_modules/react-native-permissions"
   RNReactNativeHapticFeedback:
@@ -1914,6 +1938,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 4ee74815bbf19f42fbda89a677a7966fb6cb79c0
   ReactCommon: 36d48f542b4010786d6b2bcee615fe5f906b7105
   RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
+  RNKeychain: 57c0b42f79950ba6bdca5277ab52a6b24dccd595
   RNPermissions: 4f7b81b0d457c8ec4e892cc36ef2376734a4b22c
   RNReactNativeHapticFeedback: 7a16d95d4b3b2f598de4125a627fb1821857d69e
   RNScreens: 631b8768411a16e356f7934058d2139d0cc75157

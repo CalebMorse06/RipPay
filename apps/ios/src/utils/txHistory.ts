@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type {SigningMethod} from './signingPrefs';
 
 const STORAGE_KEY = 'coldtap_tx_history';
 const MAX_ENTRIES = 20;
@@ -13,6 +14,7 @@ export interface TxRecord {
   destinationAddress: string;
   fiatDisplay?: string;
   pricedInFiat?: boolean;
+  signedVia?: SigningMethod;
   completedAt: string; // ISO timestamp
 }
 

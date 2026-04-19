@@ -73,7 +73,7 @@ export default function MerchantLanding({navigation, route}: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <ActivityIndicator size="large" color="#2563EB" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.label}>Opening checkout…</Text>
         <Text style={styles.sub}>{merchantId}</Text>
       </View>

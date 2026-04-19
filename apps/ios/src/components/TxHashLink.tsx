@@ -1,10 +1,19 @@
 import React from 'react';
 import {Text, StyleSheet, Linking, TouchableOpacity} from 'react-native';
+import type {NetworkId} from '@coldtap/shared';
+import {Colors, Typography} from '../theme';
 
-export default function TxHashLink({txHash}: {txHash: string}) {
-  const url = `https://testnet.xrpl.org/transactions/${txHash}`;
+function explorerUrl(txHash: string, network?: NetworkId): string {
+  const host =
+    network === 'mainnet' ? 'livenet.xrpl.org'
+    : network === 'devnet' ? 'devnet.xrpl.org'
+    : 'testnet.xrpl.org';
+  return `https://${host}/transactions/${txHash}`;
+}
+
+export default function TxHashLink({txHash, network}: {txHash: string; network?: NetworkId}) {
   return (
-    <TouchableOpacity onPress={() => Linking.openURL(url)}>
+    <TouchableOpacity onPress={() => Linking.openURL(explorerUrl(txHash, network))} activeOpacity={0.6}>
       <Text style={styles.hash} numberOfLines={1} ellipsizeMode="middle">
         {txHash}
       </Text>
@@ -17,13 +26,13 @@ const styles = StyleSheet.create({
   hash: {
     fontFamily: 'Courier',
     fontSize: 12,
-    color: '#6B7280',
+    color: Colors.textSecondary,
     marginTop: 8,
   },
   link: {
-    fontSize: 14,
-    color: '#60A5FA',
+    fontSize: Typography.sm,
+    color: Colors.primary,
     marginTop: 4,
-    fontWeight: '600',
+    fontWeight: Typography.semibold,
   },
 });

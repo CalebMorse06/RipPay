@@ -9,8 +9,13 @@ export function dropsToXrp(drops: string): string {
   return `${whole.toString()}.${fracStr}`;
 }
 
+/**
+ * Decimal XRP amount as a string, without unit. Consumers render the
+ * currency label separately, which lets UIs style the numeric portion
+ * and the unit differently (e.g. smaller/muted unit).
+ */
 export function formatXrp(drops: string): string {
-  return `${dropsToXrp(drops)} XRP`;
+  return dropsToXrp(drops);
 }
 
 export function xrpToDrops(xrp: string): string {

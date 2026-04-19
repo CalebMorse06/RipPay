@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,18 @@ import {useLedgerPrewarm, PrewarmStatus} from '../hooks/useLedgerPrewarm';
 import AmountDisplay from '../components/AmountDisplay';
 import SessionStatusBadge from '../components/SessionStatusBadge';
 import {Colors, Typography, Radius, Shadow} from '../theme';
+import {getSigningMethod, type SigningMethod} from '../utils/signingPrefs';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Checkout'>;
 
 export default function CheckoutScreen({navigation, route}: Props) {
   const {sessionId} = route.params;
   const {session, loading, error} = useSession(sessionId);
+  const [signingMethod, setSigningMethodState] = useState<SigningMethod>('ledger');
+
+  useEffect(() => {
+    getSigningMethod().then(setSigningMethodState).catch(() => {});
+  }, []);
 
   const canApprove =
     session !== null &&
@@ -30,7 +36,7 @@ export default function CheckoutScreen({navigation, route}: Props) {
     );
 
   const {status: prewarmStatus, failReason: prewarmFailReason} =
-    useLedgerPrewarm(canApprove);
+    useLedgerPrewarm(canApprove && signingMethod === 'ledger');
 
   useEffect(() => {
     if (session?.status === 'CREATED' || session?.status === 'AWAITING_BUYER') {
@@ -154,8 +160,16 @@ export default function CheckoutScreen({navigation, route}: Props) {
           <DetailRow label="Session" value={session.id} mono last />
         </View>
 
-        {/* Ledger readiness */}
-        <SignerReadinessBanner status={prewarmStatus} failReason={prewarmFailReason} />
+        {/* Ledger readiness — local-signing mode shows a Face ID hint instead */}
+        {signingMethod === 'ledger' ? (
+          <SignerReadinessBanner status={prewarmStatus} failReason={prewarmFailReason} />
+        ) : (
+          <View style={[bannerStyles.banner, bannerStyles.faceId]}>
+            <Text style={[bannerStyles.text, bannerStyles.faceIdText]}>
+              Face ID will approve this payment
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* Approve CTA */}
@@ -164,8 +178,10 @@ export default function CheckoutScreen({navigation, route}: Props) {
           style={[styles.approveButton, !canApprove && styles.approveButtonDisabled]}
           onPress={handleApprove}
           disabled={!canApprove}>
-          <Text style={styles.approveButtonText}>Approve with Ledger</Text>
-          {prewarmStatus === 'ready' && (
+          <Text style={styles.approveButtonText}>
+            {signingMethod === 'local' ? 'Approve with Face ID' : 'Approve with Ledger'}
+          </Text>
+          {signingMethod === 'ledger' && prewarmStatus === 'ready' && (
             <Text style={styles.approveButtonSub}>Signer ready</Text>
           )}
         </TouchableOpacity>
@@ -278,6 +294,8 @@ const bannerStyles = StyleSheet.create({
   failedContent: {flex: 1},
   failedText: {color: Colors.error, fontSize: Typography.sm, fontWeight: Typography.medium},
   failedSub: {fontSize: Typography.xs, color: Colors.textSecondary, marginTop: 3},
+  faceId: {backgroundColor: Colors.primaryLight, borderColor: '#BFDBFE'},
+  faceIdText: {color: Colors.primary},
 });
 
 const styles = StyleSheet.create({

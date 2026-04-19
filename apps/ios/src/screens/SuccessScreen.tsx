@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  Animated,
+  Easing,
 } from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {CommonActions} from '@react-navigation/native';
@@ -19,8 +21,12 @@ import Sound from 'react-native-sound';
 type Props = NativeStackScreenProps<RootStackParamList, 'Success'>;
 
 export default function SuccessScreen({navigation, route}: Props) {
-  const {txHash, merchantName, itemName, amountDisplay, fiatDisplay, pricedInFiat} = route.params;
+  const {txHash, merchantName, itemName, amountDisplay, fiatDisplay, pricedInFiat, signedVia, network} = route.params;
   const reset = useSessionStore(s => s.reset);
+
+  const checkScale = useRef(new Animated.Value(0)).current;
+  const ringScale = useRef(new Animated.Value(0.6)).current;
+  const ringOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     ReactNativeHapticFeedback.trigger('notificationSuccess', {
@@ -32,7 +38,34 @@ export default function SuccessScreen({navigation, route}: Props) {
         setTimeout(() => chime.play(() => chime.release()), 50);
       }
     });
-  }, []);
+    Animated.parallel([
+      Animated.spring(checkScale, {
+        toValue: 1,
+        tension: 80,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+      Animated.timing(ringScale, {
+        toValue: 1,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.timing(ringOpacity, {
+          toValue: 1,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ringOpacity, {
+          toValue: 0.0,
+          duration: 500,
+          delay: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [checkScale, ringScale, ringOpacity]);
 
   function handleHome() {
     reset();
@@ -51,9 +84,16 @@ export default function SuccessScreen({navigation, route}: Props) {
 
         {/* Success icon */}
         <View style={styles.iconWrap}>
-          <View style={styles.checkRing}>
+          <Animated.View
+            style={[
+              styles.ripple,
+              {opacity: ringOpacity, transform: [{scale: ringScale}]},
+            ]}
+          />
+          <Animated.View
+            style={[styles.checkRing, {transform: [{scale: checkScale}]}]}>
             <Text style={styles.checkmark}>✓</Text>
-          </View>
+          </Animated.View>
         </View>
 
         <Text style={styles.title}>Payment Complete</Text>
@@ -100,7 +140,11 @@ export default function SuccessScreen({navigation, route}: Props) {
         <View style={styles.securityRow}>
           <View style={styles.securityBadge}>
             <Text style={styles.securityIcon}>🔒</Text>
-            <Text style={styles.securityText}>Ledger-signed · key never exposed</Text>
+            <Text style={styles.securityText}>
+              {signedVia === 'local'
+                ? 'Signed on device · Face ID'
+                : 'Ledger-signed · key never exposed'}
+            </Text>
           </View>
           <View style={styles.xrplBadge}>
             <Text style={styles.xrplText}>Settled on XRPL</Text>
@@ -110,7 +154,7 @@ export default function SuccessScreen({navigation, route}: Props) {
         {/* Transaction hash */}
         <View style={styles.txCard}>
           <Text style={styles.txLabel}>TRANSACTION</Text>
-          <TxHashLink txHash={txHash} />
+          <TxHashLink txHash={txHash} network={network} />
         </View>
 
       </ScrollView>
@@ -133,7 +177,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 20,
   },
-  iconWrap: {marginBottom: 4},
+  iconWrap: {
+    marginBottom: 4,
+    width: 120,
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   checkRing: {
     width: 80,
     height: 80,
@@ -143,6 +193,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.success,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ripple: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: Radius.full,
+    borderWidth: 2,
+    borderColor: Colors.success,
   },
   checkmark: {fontSize: 38, color: Colors.success},
   title: {

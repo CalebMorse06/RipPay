@@ -21,7 +21,7 @@ function baseSession(): Session {
     merchantName: "Test",
     itemName: "Item",
     amountDrops: AMOUNT_DROPS,
-    amountDisplay: "2.5 XRP",
+    amountDisplay: "2.5",
     currency: "XRP",
     destinationAddress: DESTINATION,
     status: "AWAITING_SIGNATURE",
