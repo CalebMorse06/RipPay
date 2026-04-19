@@ -75,25 +75,53 @@ export async function submitToNetwork(txBlob: string): Promise<SubmitResult> {
   }
 
   try {
-    const result = await jsonRpc<{ engine_result?: string; engine_result_message?: string }>(
-      "submit",
-      { tx_blob: txBlob, fail_hard: false },
-    );
+    const result = await jsonRpc<{
+      engine_result?: string;
+      engine_result_message?: string;
+      status?: string;
+      error?: string;
+      error_code?: number;
+      error_message?: string;
+      error_exception?: string;
+    }>("submit", { tx_blob: txBlob, fail_hard: false });
+
+    log("submit response", result as Record<string, unknown>);
+
+    // JSON-RPC-level error (bad params, rate limit, server issue). No engine_result.
+    if (result.status === "error" || result.error) {
+      const reason = [
+        "submit rpc:",
+        result.error ?? "error",
+        result.error_message ?? result.error_exception ?? "",
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      return { ok: false, reason };
+    }
+
     const engineResult = result.engine_result ?? "";
-    log("submit", { engineResult, message: result.engine_result_message });
+    if (!engineResult) {
+      return {
+        ok: false,
+        reason: `submit: rippled returned no engine_result (raw: ${JSON.stringify(result).slice(0, 300)})`,
+      };
+    }
 
     if (!isProvisionallySuccessful(engineResult)) {
       return {
         ok: false,
         engineResult,
-        reason: `submit: ${engineResult || "unknown"}${result.engine_result_message ? ` — ${result.engine_result_message}` : ""}`,
+        reason: `submit: ${engineResult}${
+          result.engine_result_message ? ` — ${result.engine_result_message}` : ""
+        }`,
       };
     }
     return { ok: true, engineResult, reason: "" };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     log("submit error", { reason });
-    return { ok: false, reason };
+    return { ok: false, reason: `submit error: ${reason}` };
   }
 }
 
@@ -177,18 +205,35 @@ function isProvisionallySuccessful(engineResult: string): boolean {
  */
 async function jsonRpc<T>(method: string, params: Record<string, unknown>): Promise<T> {
   const url = getXrplRpcUrl();
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ method, params: [params] }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ method, params: [params] }),
+    });
+  } catch (err) {
+    throw new Error(
+      `fetch to ${url} failed: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`JSON-RPC HTTP ${res.status}: ${text.slice(0, 200)}`);
+    throw new Error(`JSON-RPC HTTP ${res.status} from ${url}: ${text.slice(0, 200)}`);
   }
-  const json = (await res.json()) as { result?: T & { error?: string; error_message?: string } };
+
+  let json: { result?: T };
+  try {
+    json = (await res.json()) as { result?: T };
+  } catch (err) {
+    throw new Error(
+      `JSON-RPC parse failed from ${url}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+
   if (!json.result) {
-    throw new Error(`JSON-RPC no result in response`);
+    throw new Error(`JSON-RPC missing result from ${url}: ${JSON.stringify(json).slice(0, 200)}`);
   }
   return json.result;
 }
