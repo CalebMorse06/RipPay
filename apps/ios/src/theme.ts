@@ -8,10 +8,10 @@ export const Colors = {
   border: '#E4E6EB',
   borderStrong: '#C8CAD0',
 
-  // Brand / primary action
-  primary: '#3D95CE',
-  primaryDark: '#2176AE',
-  primaryLight: '#EBF5FC',
+  // Brand / primary action — RipPay cobalt
+  primary: '#1B52E8',
+  primaryDark: '#1440C4',
+  primaryLight: '#EBF0FF',
 
   // Text
   textPrimary: '#1A1D23',
@@ -70,9 +70,9 @@ export const Shadow = {
     elevation: 2,
   },
   button: {
-    shadowColor: '#3D95CE',
+    shadowColor: '#1B52E8',
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.22,
     shadowRadius: 6,
     elevation: 4,
   },

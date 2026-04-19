@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ColdTap palette — light-first, one ripple-blue accent.
+    <!-- RipPay palette — light-first, cobalt accent.
          Dark variants are kept at the bottom and used only by the Receipt screen. -->
 
     <!-- Light surfaces -->
@@ -17,11 +17,11 @@
     <color name="text_tertiary">#9CA3AF</color>
     <color name="text_on_accent">#FFFFFF</color>
 
-    <!-- Accent -->
-    <color name="accent">#0070E0</color>
-    <color name="accent_pressed">#0A5FBE</color>
-    <color name="accent_dim">#E0EEFD</color>
-    <color name="accent_ripple">#330070E0</color>
+    <!-- Accent — RipPay cobalt -->
+    <color name="accent">#1B52E8</color>
+    <color name="accent_pressed">#1440C4</color>
+    <color name="accent_dim">#EBF0FF</color>
+    <color name="accent_ripple">#331B52E8</color>
 
     <!-- State -->
     <color name="success">#10B981</color>

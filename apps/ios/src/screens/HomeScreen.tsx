@@ -100,8 +100,8 @@ export default function HomeScreen({navigation}: Props) {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>ColdTap</Text>
-          <Text style={styles.tagline}>Hardware-secured XRPL payments</Text>
+          <Text style={styles.logo}>RipPay</Text>
+          <Text style={styles.tagline}>Tap. Sign. Settle.</Text>
         </View>
 
         {/* Primary CTA — Tap to Pay */}
@@ -197,7 +197,7 @@ export default function HomeScreen({navigation}: Props) {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>🔒 Secured by Ledger · Settled on XRPL</Text>
+        <Text style={styles.footerText}>🔒 Ledger-secured · Settled on XRPL</Text>
       </View>
     </SafeAreaView>
   );
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   tapCardActive: {
     borderColor: Colors.primaryDark,
-    backgroundColor: '#DAF0FF',
+    backgroundColor: '#EBF0FF',
   },
   tapIconWrap: {
     width: 48,

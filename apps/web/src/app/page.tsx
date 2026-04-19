@@ -3,20 +3,36 @@ import { CreateCheckoutForm } from "@/components/CreateCheckoutForm";
 export default function LandingPage() {
   return (
     <div className="grid gap-10 md:grid-cols-2">
-      <section className="space-y-5">
-        <h1 className="text-3xl font-bold leading-[1.05] tracking-tight md:text-5xl">
-          Tap to initiate.
-          <br />
-          <span className="text-accent">Hardware-sign to pay.</span>
-        </h1>
+      <section className="space-y-6">
+        <div>
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-dim px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            XRP Ledger · Testnet
+          </div>
+          <h1 className="text-3xl font-bold leading-[1.05] tracking-tight md:text-5xl">
+            Your hardware wallet.
+            <br />
+            <span className="text-accent">Your payment terminal.</span>
+          </h1>
+        </div>
         <p className="max-w-md text-subtle leading-relaxed">
-          ColdTap is an in-person XRPL checkout. The merchant creates a session. The buyer scans,
-          reviews, and approves on a Ledger Nano X. The private key never leaves the hardware wallet.
+          RipPay brings self-custody to the point of sale. Create a session, tap the
+          buyer's phone or show a QR code, and watch them approve on their Ledger Nano X.
+          The private key never leaves the device. Settlement on XRPL in seconds.
         </p>
-        <ul className="space-y-2.5 text-sm text-subtle">
-          <Bullet>Session-based — web and iPhone apps share state only through the backend.</Bullet>
-          <Bullet>QR + NFC fallback — either path lands in the same secure signing flow.</Bullet>
-          <Bullet>Real XRPL testnet payments, tracked end-to-end.</Bullet>
+        <ul className="space-y-3 text-sm text-subtle">
+          <Bullet>
+            <strong className="text-ink">Hardware-first</strong> — private key stays on
+            the Ledger, always.
+          </Bullet>
+          <Bullet>
+            <strong className="text-ink">NFC + QR</strong> — two tap paths, one secure
+            signing flow.
+          </Bullet>
+          <Bullet>
+            <strong className="text-ink">On-chain proof</strong> — every payment settles
+            on XRPL and is publicly verifiable.
+          </Bullet>
         </ul>
       </section>
 

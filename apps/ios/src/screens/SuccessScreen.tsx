@@ -88,7 +88,7 @@ export default function SuccessScreen({navigation, route}: Props) {
         <View style={styles.securityRow}>
           <View style={styles.securityBadge}>
             <Text style={styles.securityIcon}>🔒</Text>
-            <Text style={styles.securityText}>Signed by Ledger Nano X</Text>
+            <Text style={styles.securityText}>Ledger-signed · key never exposed</Text>
           </View>
           <View style={styles.xrplBadge}>
             <Text style={styles.xrplText}>Settled on XRPL</Text>

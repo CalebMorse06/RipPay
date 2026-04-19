@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ColdTap</string>
-    <string name="service_description">ColdTap checkout launch target</string>
-    <string name="aid_group_description">ColdTap session handoff</string>
+    <string name="app_name">RipPay</string>
+    <string name="service_description">RipPay checkout launch target</string>
+    <string name="aid_group_description">RipPay session handoff</string>
 
     <!-- Setup / first-run screen -->
     <string name="setup_title">Set up your register</string>
@@ -83,7 +83,7 @@
     <string name="settings_saved">Settings saved</string>
 
     <!-- Legacy spike UI (kept on debug screen) -->
-    <string name="title">ColdTap Merchant</string>
+    <string name="title">RipPay Merchant</string>
     <string name="subtitle">NFC tap target (debug)</string>
     <string name="label_nfc">NFC</string>
     <string name="label_hce">HCE</string>

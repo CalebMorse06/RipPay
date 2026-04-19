@@ -14,10 +14,10 @@ const config: Config = {
         subtle: "#6b7280",
         tertiary: "#9ca3af",
 
-        // Accent — Square-style blue
-        accent: "#0070e0",
-        "accent-dim": "#e0eefd",
-        "accent-pressed": "#0a5fbe",
+        // Accent — RipPay cobalt
+        accent: "#1B52E8",
+        "accent-dim": "#EBF0FF",
+        "accent-pressed": "#1440C4",
 
         // State
         success: "#10b981",
