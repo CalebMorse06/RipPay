@@ -10,7 +10,7 @@
 
 RipPay is a working in-person XRP checkout built around two real native mobile apps we installed on our own phones. The merchant runs our **native Android HCE app**; the buyer runs our **native iPhone app** and signs with a **Ledger Nano X over BLE** or with **Face ID** gating an on-device `xrpl.Wallet`. The two phones meet over NFC at the counter, the signed Payment settles on XRPL in ~3–5 seconds, and the transaction is cryptographically bound to the checkout session via `InvoiceID`. No custodian. No browser extension. No seed-phrase-on-a-napkin ceremony.
 
-> **Brand note.** A Handful of internal identifiers (`com.coldtap.hce` Android package, `coldtap://` URL scheme, Xcode project `ColdTap`) are preserved across an in-flight rebrand to **RipPay**. They stay put because renaming them mid-demo invalidates signing identity and provisioning profiles. Everything user-facing is RipPay.
+> **Brand note.** A handful of internal identifiers (`com.coldtap.hce` Android package, `coldtap://` URL scheme, Xcode project `ColdTap`) are preserved across an in-flight rebrand to **RipPay**. They stay put because renaming them mid-demo invalidates signing identity and provisioning profiles. Everything user-facing is RipPay.
 
 ---
 
