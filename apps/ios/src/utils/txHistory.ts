@@ -11,6 +11,8 @@ export interface TxRecord {
   amountDisplay: string;
   amountDrops: string;
   destinationAddress: string;
+  fiatDisplay?: string;
+  pricedInFiat?: boolean;
   completedAt: string; // ISO timestamp
 }
 

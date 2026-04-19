@@ -1,6 +1,8 @@
 package com.coldtap.hce
 
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -9,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import androidx.lifecycle.lifecycleScope
 import com.coldtap.hce.data.CreateSessionRequest
@@ -41,6 +44,7 @@ class MainActivity : AppCompatActivity() {
     private var currentConfig: MerchantConfig? = null
     private var api: SessionApi? = null
     private var submitting = false
+    private var currency: String = "USD"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,12 +54,14 @@ class MainActivity : AppCompatActivity() {
         repo = MerchantConfigRepository.get(this)
 
         wireKeypad()
+        wireCurrencyToggle()
         binding.settingsButton.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
         binding.noteButton.setOnClickListener { showNoteDialog() }
         binding.createButton.setOnClickListener { onCreateTap() }
 
+        refreshCurrencyToggle()
         refreshAmountUi()
     }
 
@@ -89,6 +95,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun wireCurrencyToggle() {
+        binding.currencyUsd.setOnClickListener { switchCurrency("USD") }
+        binding.currencyXrp.setOnClickListener { switchCurrency("XRP") }
+    }
+
+    private fun switchCurrency(next: String) {
+        if (next == currency) return
+        currency = next
+        // Clear amount so "3.50" doesn't silently jump from $3.50 to 3.50 XRP.
+        amount.clear()
+        refreshCurrencyToggle()
+        refreshAmountUi()
+    }
+
+    private fun refreshCurrencyToggle() {
+        val accentTint = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.accent))
+        val transparentTint = ColorStateList.valueOf(Color.TRANSPARENT)
+        val onAccent = ContextCompat.getColor(this, R.color.text_on_accent)
+        val secondary = ContextCompat.getColor(this, R.color.text_secondary)
+        val usdActive = currency == "USD"
+        binding.currencyUsd.backgroundTintList = if (usdActive) accentTint else transparentTint
+        binding.currencyUsd.setTextColor(if (usdActive) onAccent else secondary)
+        binding.currencyXrp.backgroundTintList = if (!usdActive) accentTint else transparentTint
+        binding.currencyXrp.setTextColor(if (!usdActive) onAccent else secondary)
+    }
+
     private fun wireKeypad() {
         val digitMap = mapOf(
             binding.key0 to '0', binding.key1 to '1', binding.key2 to '2',
@@ -104,13 +136,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshAmountUi() {
-        binding.amountText.text = amount.display
+        binding.amountText.text = if (currency == "USD") "$${amount.display}" else amount.display
         val has = amount.hasAmount()
         binding.createButton.isEnabled = has && !submitting
-        binding.createButton.text = if (has) {
-            getString(R.string.home_charge, amount.display)
-        } else {
-            getString(R.string.home_charge_zero)
+        binding.createButton.text = when {
+            has && currency == "USD" -> getString(R.string.home_charge, amount.display)
+            has -> getString(R.string.home_charge_xrp, amount.display)
+            currency == "USD" -> getString(R.string.home_charge_zero)
+            else -> getString(R.string.home_charge_xrp_zero)
         }
     }
 
@@ -145,12 +178,28 @@ class MainActivity : AppCompatActivity() {
     private fun onCreateTap() {
         val config = currentConfig ?: return
         val client = api ?: return
-        val drops = amount.toDropsOrNull() ?: run {
+        if (!amount.hasAmount()) {
             Toast.makeText(this, R.string.home_error_zero, Toast.LENGTH_SHORT).show()
             return
         }
-        // Square-style: "note" doubles as the item name. Default when empty.
-        val itemName = note.ifBlank { DEFAULT_ITEM_NAME }
+        val request = if (currency == "USD") {
+            val usd = amount.toUsdDecimalStringOrNull() ?: return
+            CreateSessionRequest(
+                merchantName = config.merchantName,
+                itemName = note.ifBlank { DEFAULT_ITEM_NAME },
+                destinationAddress = config.destinationAddress,
+                fiatAmount = usd,
+                fiatCurrency = "USD",
+            )
+        } else {
+            val drops = amount.toDropsOrNull() ?: return
+            CreateSessionRequest(
+                merchantName = config.merchantName,
+                itemName = note.ifBlank { DEFAULT_ITEM_NAME },
+                destinationAddress = config.destinationAddress,
+                amountDrops = drops,
+            )
+        }
 
         submitting = true
         refreshAmountUi()
@@ -159,14 +208,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val result = runCatching {
                 withContext(Dispatchers.IO) {
-                    client.createSession(
-                        CreateSessionRequest(
-                            merchantName = config.merchantName,
-                            itemName = itemName,
-                            amountDrops = drops,
-                            destinationAddress = config.destinationAddress,
-                        ),
-                    )
+                    client.createSession(request)
                 }
             }
             submitting = false

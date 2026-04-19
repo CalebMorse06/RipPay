@@ -19,7 +19,7 @@ import Sound from 'react-native-sound';
 type Props = NativeStackScreenProps<RootStackParamList, 'Success'>;
 
 export default function SuccessScreen({navigation, route}: Props) {
-  const {txHash, merchantName, itemName, amountDisplay} = route.params;
+  const {txHash, merchantName, itemName, amountDisplay, fiatDisplay, pricedInFiat} = route.params;
   const reset = useSessionStore(s => s.reset);
 
   useEffect(() => {
@@ -59,10 +59,22 @@ export default function SuccessScreen({navigation, route}: Props) {
         <Text style={styles.title}>Payment Complete</Text>
 
         {/* Amount — hero element */}
-        {amountDisplay ? (
-          <View style={styles.amountWrap}>
-            <Text style={styles.amountValue}>{amountDisplay}</Text>
-            <Text style={styles.amountCurrency}>XRP</Text>
+        {pricedInFiat && fiatDisplay ? (
+          <View style={styles.amountStack}>
+            <Text style={styles.amountValue}>{fiatDisplay}</Text>
+            {amountDisplay ? (
+              <Text style={styles.amountConversion}>≈ {amountDisplay} XRP</Text>
+            ) : null}
+          </View>
+        ) : amountDisplay ? (
+          <View style={styles.amountStack}>
+            <View style={styles.amountWrap}>
+              <Text style={styles.amountValue}>{amountDisplay}</Text>
+              <Text style={styles.amountCurrency}>XRP</Text>
+            </View>
+            {fiatDisplay ? (
+              <Text style={styles.amountConversion}>≈ {fiatDisplay}</Text>
+            ) : null}
           </View>
         ) : null}
 
@@ -144,6 +156,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 6,
     marginVertical: 4,
+  },
+  amountStack: {
+    alignItems: 'center',
+    gap: 4,
+    marginVertical: 4,
+  },
+  amountConversion: {
+    fontSize: Typography.sm,
+    color: Colors.textSecondary,
+    fontWeight: Typography.medium,
   },
   amountValue: {
     fontSize: 52,

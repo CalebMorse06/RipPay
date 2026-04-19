@@ -4,17 +4,18 @@ import java.math.BigInteger
 
 /**
  * Cash-register style amount entry. The internal state is an integer number of
- * cents. Typing "3" when cents=0 produces 3 → displays "0.03"; another "5"
- * produces 35 → "0.35"; another "0" produces 350 → "3.50". Backspace divides
- * by ten; Clear resets to zero.
+ * hundredths — unit-agnostic. The caller decides whether to interpret the
+ * display as dollars or as XRP:
+ *   - USD mode: `toUsdDecimalStringOrNull()` → "3.50" (dollars, sent as fiatAmount)
+ *   - XRP mode: `toDropsOrNull()` → "35000000" (hundredths × 10_000 = drops)
  *
- * All ColdTap amounts are XRP; we enter them at 2-decimal precision (the
- * natural "cashier" granularity) and convert to drops via × 10,000:
- *   1 XRP = 1_000_000 drops, 1 cent-of-XRP = 10_000 drops.
+ * Typing "3" when cents=0 produces 3 → displays "0.03"; another "5" produces
+ * 35 → "0.35"; another "0" produces 350 → "3.50". Backspace divides by ten;
+ * Clear resets to zero.
  */
 class AmountInput {
 
-    /** Amount in hundredths of XRP. */
+    /** Amount in hundredths. Interpreted as US cents or as hundredths-of-XRP by the caller. */
     private var cents: Long = 0
 
     /** Human display, always two decimal places, e.g. "0.00", "3.50", "125.00". */
@@ -43,9 +44,15 @@ class AmountInput {
         cents = 0
     }
 
+    /** Return the decimal display ("3.50") when non-zero, else null. */
+    fun toUsdDecimalStringOrNull(): String? {
+        if (cents <= 0) return null
+        return display
+    }
+
     /**
-     * Convert to drops as an integer string. Returns null when amount is zero.
-     * 1 cent = 10_000 drops; BigInteger avoids any long overflow for absurd inputs.
+     * Return drops as an integer string when interpreting the input as XRP
+     * (hundredths-of-XRP × 10_000). Null when zero.
      */
     fun toDropsOrNull(): String? {
         if (cents <= 0) return null
@@ -53,7 +60,7 @@ class AmountInput {
     }
 
     companion object {
-        private const val MAX_CENTS = 999_999_99L // 999,999.99 XRP
+        private const val MAX_CENTS = 999_999_99L // $999,999.99 or 999,999.99 XRP
         private const val DROPS_PER_CENT = 10_000L
     }
 }

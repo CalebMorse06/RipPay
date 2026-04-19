@@ -202,6 +202,8 @@ export default function ProcessingScreen({navigation, route}: Props) {
           amountDisplay: sessionData.amountDisplay,
           amountDrops: sessionData.amountDrops,
           destinationAddress: sessionData.destinationAddress,
+          fiatDisplay: sessionData.fiatDisplay,
+          pricedInFiat: Boolean(sessionData.fiatAmount),
           completedAt: new Date().toISOString(),
         }).catch(() => {});
       }
@@ -212,6 +214,8 @@ export default function ProcessingScreen({navigation, route}: Props) {
         merchantName: sessionData?.merchantName,
         itemName: sessionData?.itemName,
         amountDisplay: sessionData?.amountDisplay,
+        fiatDisplay: sessionData?.fiatDisplay,
+        pricedInFiat: Boolean(sessionData?.fiatAmount),
       });
     } catch (e: unknown) {
       await closeTransport(transportRef.current);

@@ -4,18 +4,24 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { xrpToDrops } from "@/lib/drops";
 
+type Currency = "USD" | "XRP";
+
 const DEMO_PRESET = {
   merchantName: "Demo Cafe",
   itemName: "Cold brew",
-  amount: "1",
+  amount: "3.50",
   destinationAddress: "rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe",
   memo: "",
 };
+
+const USD_REGEX = /^\d+(\.\d{1,2})?$/;
+const XRP_REGEX = /^\d+(\.\d{1,6})?$/;
 
 export function CreateCheckoutForm() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<Currency>("USD");
   const [values, setValues] = useState({
     merchantName: "",
     itemName: "",
@@ -26,31 +32,56 @@ export function CreateCheckoutForm() {
 
   function fillDemo() {
     setValues({ ...DEMO_PRESET });
+    setCurrency("USD");
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
   }
 
+  function switchCurrency(next: Currency) {
+    if (next === currency) return;
+    setCurrency(next);
+    // Clear the amount when switching units so "3.50" doesn't silently jump
+    // from $3.50 to 3.50 XRP. The vendor re-enters in the new unit.
+    setValues((v) => ({ ...v, amount: "" }));
+    setError(null);
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
-    let amountDrops: string;
-    try {
-      amountDrops = xrpToDrops(values.amount);
-    } catch {
-      setError("Enter a valid positive XRP amount (e.g. 2.5)");
+    const amount = values.amount.trim();
+    const regex = currency === "USD" ? USD_REGEX : XRP_REGEX;
+    if (!regex.test(amount) || Number(amount) <= 0) {
+      setError(
+        currency === "USD"
+          ? "Enter a valid positive USD amount (e.g. 3.50)"
+          : "Enter a valid positive XRP amount (e.g. 2.5)",
+      );
       return;
     }
 
-    const payload = {
+    const base = {
       merchantName: values.merchantName.trim(),
       itemName: values.itemName.trim(),
       destinationAddress: values.destinationAddress.trim(),
       memo: values.memo.trim() || undefined,
-      amountDrops,
     };
+    let payload: Record<string, unknown>;
+    if (currency === "USD") {
+      payload = { ...base, fiatAmount: amount, fiatCurrency: "USD" };
+    } else {
+      let amountDrops: string;
+      try {
+        amountDrops = xrpToDrops(amount);
+      } catch {
+        setError("Enter a valid positive XRP amount (e.g. 2.5)");
+        return;
+      }
+      payload = { ...base, amountDrops };
+    }
 
     setSubmitting(true);
     try {
@@ -91,16 +122,26 @@ export function CreateCheckoutForm() {
         value={values.itemName}
         onChange={handleChange}
       />
-      <Field
-        label="Amount (XRP)"
-        name="amount"
-        placeholder="1.00"
-        required
-        inputMode="decimal"
-        pattern="^\d+(\.\d{1,6})?$"
-        value={values.amount}
-        onChange={handleChange}
-      />
+
+      <label className="grid gap-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle">
+            Amount ({currency})
+          </span>
+          <CurrencyToggle value={currency} onChange={switchCurrency} />
+        </div>
+        <input
+          name="amount"
+          placeholder={currency === "USD" ? "3.50" : "1.00"}
+          required
+          inputMode="decimal"
+          pattern={currency === "USD" ? "^\\d+(\\.\\d{1,2})?$" : "^\\d+(\\.\\d{1,6})?$"}
+          value={values.amount}
+          onChange={handleChange}
+          className="rounded-xl border border-border bg-bg px-4 py-3 text-ink outline-none transition placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/20"
+        />
+      </label>
+
       <Field
         label="Destination XRPL address"
         name="destinationAddress"
@@ -142,6 +183,37 @@ export function CreateCheckoutForm() {
         </button>
       </div>
     </form>
+  );
+}
+
+function CurrencyToggle({
+  value,
+  onChange,
+}: {
+  value: Currency;
+  onChange: (next: Currency) => void;
+}) {
+  return (
+    <div className="inline-flex rounded-full border border-border bg-surface p-0.5 text-[11px] font-semibold">
+      {(["USD", "XRP"] as const).map((c) => {
+        const active = value === c;
+        return (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className={`rounded-full px-3 py-1 transition ${
+              active
+                ? "bg-accent text-white"
+                : "text-subtle hover:text-ink"
+            }`}
+            aria-pressed={active}
+          >
+            {c}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

@@ -60,16 +60,39 @@
         android:layout_height="1dp"
         android:background="@color/divider" />
 
+    <!-- Currency toggle: USD | XRP (segmented pill). -->
+    <LinearLayout
+        android:id="@+id/currencyToggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginStart="20dp"
+        android:layout_marginTop="22dp"
+        android:background="@drawable/bg_stats_pill"
+        android:orientation="horizontal"
+        android:padding="3dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/currencyUsd"
+            style="@style/Widget.ColdTap.CurrencyPill"
+            android:text="USD" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/currencyXrp"
+            style="@style/Widget.ColdTap.CurrencyPill"
+            android:text="XRP" />
+    </LinearLayout>
+
     <!-- Amount hero -->
     <TextView
         android:id="@+id/amountText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="28dp"
+        android:layout_marginTop="14dp"
         android:paddingHorizontal="20dp"
         android:text="0"
         android:textAppearance="@style/TextAppearance.ColdTap.AmountHero"
-        tools:text="£25.00" />
+        tools:text="$25.00" />
 
     <!-- "+ Note" pill -->
     <com.google.android.material.button.MaterialButton

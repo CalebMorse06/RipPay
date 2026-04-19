@@ -23,3 +23,20 @@ export function xrpToDrops(xrp: string): string {
   if (drops <= 0n) throw new Error("Amount must be positive");
   return drops.toString();
 }
+
+export function usdToDrops(usd: string, xrpUsdRate: number): string {
+  const usdNum = Number(usd);
+  if (!Number.isFinite(usdNum) || usdNum <= 0) throw new Error("Invalid USD amount");
+  if (!Number.isFinite(xrpUsdRate) || xrpUsdRate <= 0) throw new Error("Invalid rate");
+  const xrp = usdNum / xrpUsdRate;
+  const drops = Math.round(xrp * 1_000_000);
+  if (drops <= 0) throw new Error("USD amount too small to represent in drops");
+  return String(drops);
+}
+
+export function dropsToUsd(drops: string, xrpUsdRate: number): string {
+  if (!Number.isFinite(xrpUsdRate) || xrpUsdRate <= 0) throw new Error("Invalid rate");
+  const xrp = Number(dropsToXrp(drops));
+  if (!Number.isFinite(xrp)) throw new Error("Invalid drops");
+  return (xrp * xrpUsdRate).toFixed(2);
+}

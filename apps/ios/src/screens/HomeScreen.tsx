@@ -215,7 +215,9 @@ function HistoryRow({tx, last}: {tx: TxRecord; last: boolean}) {
         <Text style={histStyles.item} numberOfLines={1}>{tx.itemName}</Text>
       </View>
       <View style={histStyles.right}>
-        <Text style={histStyles.amount}>{tx.amountDisplay} XRP</Text>
+        <Text style={histStyles.amount}>
+          {tx.pricedInFiat && tx.fiatDisplay ? tx.fiatDisplay : `${tx.amountDisplay} XRP`}
+        </Text>
         <Text style={histStyles.time}>{timeAgo(tx.completedAt)}</Text>
       </View>
     </View>

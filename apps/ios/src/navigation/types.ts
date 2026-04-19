@@ -10,5 +10,7 @@ export type RootStackParamList = {
     merchantName?: string;
     itemName?: string;
     amountDisplay?: string;
+    fiatDisplay?: string;
+    pricedInFiat?: boolean;
   };
 };

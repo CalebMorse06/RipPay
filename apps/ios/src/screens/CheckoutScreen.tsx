@@ -136,6 +136,8 @@ export default function CheckoutScreen({navigation, route}: Props) {
           <AmountDisplay
             amountDisplay={session.amountDisplay}
             currency={session.currency}
+            fiatDisplay={session.fiatDisplay}
+            pricedInFiat={Boolean(session.fiatAmount)}
           />
         </View>
 

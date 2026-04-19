@@ -46,14 +46,20 @@ data class Session(
     val paidAt: String? = null,
     val failedAt: String? = null,
     val expiredAt: String? = null,
+    val fiatAmount: String? = null,
+    val fiatCurrency: String? = null,
+    val exchangeRate: String? = null,
+    val fiatDisplay: String? = null,
 )
 
 @Serializable
 data class CreateSessionRequest(
     val merchantName: String,
     val itemName: String,
-    val amountDrops: String,
     val destinationAddress: String,
+    val amountDrops: String? = null,
+    val fiatAmount: String? = null,
+    val fiatCurrency: String? = null,
     val memo: String? = null,
     val expiresInSec: Int? = null,
 )

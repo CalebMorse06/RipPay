@@ -33,6 +33,13 @@ export interface Session {
   paidAt?: string;
   failedAt?: string;
   expiredAt?: string;
+  // Fiat pricing snapshot, set when the merchant priced the session in USD
+  // rather than XRP. The on-ledger amount is still amountDrops — these fields
+  // are informational and get surfaced on buyer screens and receipts.
+  fiatAmount?: string;
+  fiatCurrency?: "USD";
+  exchangeRate?: string;
+  fiatDisplay?: string;
 }
 
 /** Unsigned XRP Payment transaction from POST /api/sessions/:id/prepare */
