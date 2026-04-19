@@ -30,7 +30,6 @@ RipPay is a working in-person XRP checkout built around two real native mobile a
   - [Repo layout](#repo-layout)
 - [The apps we built](#the-apps-we-built)
 - [Roadmap — what would unlock more XRPL surface area](#roadmap--what-would-unlock-more-xrpl-surface-area)
-- [Hackathon feedback](#hackathon-feedback)
 - [Links](#links)
 
 ---
@@ -285,20 +284,6 @@ RipPay today uses the core Payment pathway deeply, but there's more XRPL we coul
 - **Multi-signature merchant accounts** — `SignerListSet`. Lets a merchant require two-of-three signers (owner + accountant + backend) for payouts out of the account.
 - **Token-gated merchants** — NFT or MPT ownership requirement to unlock premium-price tiers.
 - **Devnet AMM integration** — swap XRP for a stablecoin at the moment of checkout so buyers can pay in any on-XRPL asset.
-
----
-
-## Hackathon feedback
-
-Per the rubric's request:
-
-**What worked.** The MCP tooling was genuinely useful — pointing an agent at the backend's `server/xrpl/` modules and asking "where should RLUSD go?" produced an answer that lined up with what we'd have done manually, faster. The XRPL docs at [xrpl.org](https://xrpl.org) are searchable and the primitive definitions (especially `InvoiceID`, `LastLedgerSequence`, `Memo`) are unambiguous in a way that other chains' specs aren't — we never had to reverse-engineer what a field was supposed to do. The testnet faucet + `testnet.xrpl.org` explorer is a clean demo loop.
-
-**What didn't.** The xrpl.js SDK has a few rough edges in a React Native runtime: `Client` wants WebSocket, which works but isn't serverless-friendly, so we ended up writing a ~30-line JSON-RPC helper to avoid it on Vercel (see [`submit.ts:206`](apps/web/src/server/xrpl/submit.ts)). A "serverless-first" sub-SDK that's HTTP-only would save future teams this detour. The Ledger `hw-app-xrp` BLE flow on iOS was the single most time-consuming thing to make reliable — error messages are terse and the retry/reconnect story required a lot of guess-and-check.
-
-**On SKILL.md.** It's a genuinely good pattern for constraining a language-model agent to a known-good set of operations on an unfamiliar codebase. We used it sparingly here because our codebase is small enough that the agent can map it in-context, but for a larger merchant-integration SDK we'd lean on it much harder.
-
-**What we'd love to see.** A more opinionated, batteries-included RLUSD integration path (preconfigured issuer, auth path, trustline helper). And a first-party iOS SDK for XRPL signing — today, mobile integrators reach for React Native + xrpl.js, which requires Buffer/randomBytes polyfills, BLE transport glue, and a lot of platform-specific testing.
 
 ---
 
