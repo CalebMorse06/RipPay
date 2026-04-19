@@ -26,7 +26,7 @@ export type LinkIntent =
   | {type: 'unknown'};
 
 const MERCHANT_SEGMENTS = new Set(['merchant', 'tap', 'm']);
-const SESSION_SEGMENTS = new Set(['session', 'sessions', 's']);
+const SESSION_SEGMENTS = new Set(['session', 'sessions', 's', 'pay']);
 
 export function parseLinkIntent(input: string): LinkIntent {
   const trimmed = input.trim();

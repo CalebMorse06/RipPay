@@ -218,7 +218,7 @@ class TapReadyActivity : AppCompatActivity() {
     }
 
     private fun showQrFallbackDialog() {
-        val payUrl = "${baseUrl.trimEnd('/')}/pay/$sessionId"
+        val payUrl = "${baseUrl.trimEnd('/')}/s/$sessionId"
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_qr_fallback, null, false)
         val img = view.findViewById<ImageView>(R.id.qrImage)
         val urlText = view.findViewById<TextView>(R.id.qrUrlText)

@@ -33,7 +33,7 @@ export async function readMerchantPayload(): Promise<LinkIntent> {
       );
     }
 
-    const text = new TextDecoder().decode(new Uint8Array(response as number[]));
+    const text = (response as number[]).map(b => String.fromCharCode(b)).join('');
     return parseNFCPayload(text);
   } finally {
     NfcManager.cancelTechnologyRequest().catch(() => {});
