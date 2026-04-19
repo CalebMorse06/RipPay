@@ -2,13 +2,13 @@
 
 **Self-custody, in-person XRPL checkout — tap, sign with a Ledger Nano X or Face ID, settle on XRPL in under five seconds.**
 
-[![Live demo](https://img.shields.io/badge/demo-coldtap--web.vercel.app-0052FF)](https://coldtap-web.vercel.app)
+![Native apps](https://img.shields.io/badge/native_apps-iOS_%2B_Android-111)
+![Hardware](https://img.shields.io/badge/hardware-Ledger_Nano_X-222)
+![NFC](https://img.shields.io/badge/handoff-NFC_tap-f59e0b)
 [![Network](https://img.shields.io/badge/XRPL-testnet-blue)](https://testnet.xrpl.org)
 [![Sample tx](https://img.shields.io/badge/sample_tx-A9BEDB%E2%80%A606BF1-success)](https://testnet.xrpl.org/transactions/A9BEDB276F0A725DE326B90BA582BC59F7F238B00903E2EECFE730E1F2706BF1)
-[![Built for](https://img.shields.io/badge/built_for-XRPL_hackathon-purple)]()
-[![Stack](https://img.shields.io/badge/stack-Next.js%20%2B%20React%20Native%20%2B%20Kotlin-111)]()
 
-RipPay is a working POS system that lets an in-person buyer pay a merchant in XRP without a custodial middleman. The merchant presents a checkout on an iPad or Android phone; the buyer taps or scans, approves on hardware or with biometrics, and the payment lands on-ledger in ~3–5 seconds. Every step is open, inspectable, and cryptographically bound to the session being paid for.
+RipPay is a working in-person XRP checkout built around two real native mobile apps we installed on our own phones. The merchant runs our **native Android HCE app**; the buyer runs our **native iPhone app** and signs with a **Ledger Nano X over BLE** or with **Face ID** gating an on-device `xrpl.Wallet`. The two phones meet over NFC at the counter, the signed Payment settles on XRPL in ~3–5 seconds, and the transaction is cryptographically bound to the checkout session via `InvoiceID`. No custodian. No browser extension. No seed-phrase-on-a-napkin ceremony.
 
 > **Brand note.** The GitHub repo is `coldtap/` and a handful of internal identifiers (`com.coldtap.hce` Android package, `coldtap://` URL scheme, Xcode project `ColdTap`) are preserved across an in-flight rebrand to **RipPay**. They stay put because renaming them mid-demo invalidates signing identity and provisioning profiles. Everything user-facing is RipPay.
 
@@ -28,7 +28,7 @@ RipPay is a working POS system that lets an in-person buyer pay a merchant in XR
   - [System diagram](#system-diagram)
   - [Payment lifecycle](#payment-lifecycle)
   - [Repo layout](#repo-layout)
-- [Try it](#try-it)
+- [The apps we built](#the-apps-we-built)
 - [Roadmap — what would unlock more XRPL surface area](#roadmap--what-would-unlock-more-xrpl-surface-area)
 - [Hackathon feedback](#hackathon-feedback)
 - [Links](#links)
@@ -54,13 +54,13 @@ XRPL is also the only major L1 we found where the native schema understood "this
 ## The flow in 30 seconds
 
 ```
- Merchant phone                Buyer iPhone                   Ledger Nano X / Keychain
- ─────────────────             ──────────────                 ─────────────────
- create session  ───▶ POST /api/sessions (web dashboard)
- show NFC tag                                                       
-          buyer taps       NFC payload = "SESSION:<id>" (20 bytes)  
+ Merchant Android (HCE app)     Buyer iPhone (RipPay app)      Ledger Nano X / iOS Keychain
+ ──────────────────────────     ──────────────────────────     ────────────────────────────
+ create session  ───▶ POST /api/sessions
+ idles as NFC target
+          buyer taps       NFC payload = "SESSION:<id>" (20 bytes)
                        ◀────────────────────────────────◀
-                           opens RipPay app              
+                           opens RipPay app
                            POST /prepare  ────▶ backend builds unsigned Payment,
                                                   autofills Sequence + LastLedgerSequence
                            ◀── unsignedTx (with InvoiceID = SHA256(sessionId))
@@ -71,10 +71,10 @@ XRPL is also the only major L1 we found where the native schema understood "this
                                                 ▶ submit via JSON-RPC to rippled
                                                 ▶ poll tx until validated
                                                 ▶ write PAID to session store
- iPad dashboard flips to PAID (live via SSE)
+ Merchant Android flips to PAID (live via SSE)
 ```
 
-Full variants — browser-only (WebBluetooth), phone-to-phone NFC, QR — are in [`DEMO.md`](./DEMO.md).
+The flow above is our primary product path — phone-to-phone NFC with on-device hardware or biometric signing. See [`DEMO.md`](./DEMO.md) for the step-by-step rehearsal runbook.
 
 ---
 
@@ -180,46 +180,7 @@ We use both transports deliberately:
 
 ### System diagram
 
-```mermaid
-flowchart LR
-    subgraph Merchant["Merchant side"]
-        Web["Web dashboard<br/>Next.js /session/:id<br/>live SSE view"]
-        Android["Android HCE app<br/>NFC target<br/>AID F0434F4C44544150"]
-    end
-
-    subgraph Buyer["Buyer side"]
-        iOS["iPhone app<br/>React Native"]
-        Ledger["Ledger Nano X<br/>hw-app-xrp · BLE<br/>BIP44 44'/144'/0'/0/0"]
-        Keychain["iOS Keychain<br/>xrpl.Wallet<br/>Face ID gated"]
-        iOS -- "BLE sign" --> Ledger
-        iOS -- "OR local sign" --> Keychain
-    end
-
-    subgraph Backend["Backend · Next.js on Vercel"]
-        API["/api/sessions/*<br/>create · prepare · submit-signed · events"]
-        XRPLmod["server/xrpl/<br/>prepare · verify · submit"]
-        Store["session store"]
-        Events["SSE event bus"]
-        API --> XRPLmod
-        API --> Store
-        API --> Events
-    end
-
-    subgraph Network["XRPL Testnet"]
-        rippled["rippled<br/>JSON-RPC + WebSocket"]
-    end
-
-    Shared[("packages/shared<br/>types + Zod schemas<br/>single API contract")]
-
-    Android -. "NFC tap<br/>SESSION:&lt;id&gt;" .-> iOS
-    Web -- "create session" --> API
-    iOS -- "GET session<br/>POST prepare<br/>POST submit-signed" --> API
-    XRPLmod <== "account_info<br/>ledger_current<br/>submit · tx" ==> rippled
-    Events -. "SSE" .-> Web
-
-    Shared -.-> iOS
-    Shared -.-> API
-```
+![RipPay architecture — iPhone buyer app + Ledger Nano X over BLE on the buyer side; Android HCE merchant app + web dashboard on the merchant side; iPhone-to-Android NFC handoff; Vercel-hosted Next.js backend backed by Upstash Redis; XRPL testnet via JSON-RPC + WebSocket](./docs/architecture.png)
 
 ### Payment lifecycle
 
@@ -281,46 +242,36 @@ coldtap/                                 # repo root (dir kept legacy)
 
 ---
 
-## Try it
+## The apps we built
 
-### Fastest: live testnet demo (no install)
+**RipPay is two real, installed native mobile apps — not a browser simulation.** The sample transaction linked at the top of this README ([`A9BEDB…06BF1`](https://testnet.xrpl.org/transactions/A9BEDB276F0A725DE326B90BA582BC59F7F238B00903E2EECFE730E1F2706BF1)) was produced by the physical pair described below, tapping each other across a table, with a Ledger Nano X paired to the iPhone.
 
-1. On **Chrome on Android** (WebBluetooth required — works on Pixel / Galaxy / OnePlus):
-   - Open [`coldtap-web.vercel.app`](https://coldtap-web.vercel.app).
-   - On the merchant dashboard page, enter any item name and a price, click **Create session**.
-   - Scan the QR on the next page with the same Android phone (or copy the URL into Chrome).
-2. On the `/pay/:id` page, click **Connect Ledger** and pair your Nano X.
-3. Make sure your Ledger has the **XRP app open** and the account is testnet-funded (free XRP at [the XRPL testnet faucet](https://xrpl.org/resources/dev-tools/xrp-faucets)).
-4. Click **Approve payment**, confirm on the Ledger (press both buttons).
-5. The merchant dashboard page flips to **PAID**. Click the txid to open it on [`testnet.xrpl.org`](https://testnet.xrpl.org).
+### 🍎 iPhone buyer app — React Native
 
-Whole thing is ~90 seconds once the Ledger is paired. ~3 seconds between signing and `PAID`.
+Lives on our iPhone, built against [`apps/ios/`](apps/ios/) with Xcode and CocoaPods, signed with a personal provisioning profile, launched the normal way from the home screen.
 
-### Local development
+- **Two signing backends**, picked in Settings:
+  - **Ledger Nano X over BLE** — [`@ledgerhq/hw-app-xrp`](https://www.npmjs.com/package/@ledgerhq/hw-app-xrp) at BIP44 `44'/144'/0'/0/0`, the standard XRP path. See [`apps/ios/src/signing/LedgerSigner.ts`](apps/ios/src/signing/LedgerSigner.ts).
+  - **On-device `xrpl.Wallet`** — family seed stored in iOS Keychain with `BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE` + `WHEN_UNLOCKED_THIS_DEVICE_ONLY`. Every sign prompts Face ID. See [`apps/ios/src/signing/LocalSigner.ts`](apps/ios/src/signing/LocalSigner.ts).
+- **NFC ISO-7816 reader mode** for tapping the merchant's Android — native iOS API via [`apps/ios/src/nfc/`](apps/ios/src/nfc).
+- **Universal links** — tapping a `coldtap-web.vercel.app/s/:id` URL opens the buyer app directly at the pay screen.
+- **Prewarmed Ledger transport** — the BLE handshake runs during checkout-screen mount so the ~3–5s pairing cost is hidden from the critical path. See [`apps/ios/src/hooks/useLedgerPrewarm.ts`](apps/ios/src/hooks/useLedgerPrewarm.ts).
 
-Monorepo uses npm workspaces. Requirements: Node 20+, Xcode 15+ (for iOS), Android Studio Hedgehog+ (for Android).
+### 🤖 Android merchant app — native Kotlin HCE
 
-```bash
-git clone https://github.com/<your-fork>/coldtap.git
-cd coldtap
-npm install
-cp apps/web/.env.example apps/web/.env.local   # keep XRPL_MODE=mock for first run
-cp apps/ios/.env.example apps/ios/.env         # set BACKEND_URL if needed
+Lives on our Android phone, built against [`apps/android/`](apps/android/) with Android Studio + Gradle, installed as a debuggable APK, set as the device's preferred HCE payment service.
 
-# Web + backend
-npm run dev -w apps/web        # http://localhost:3000
+- **Host Card Emulation service** registered under AID `F0434F4C44544150` — when the buyer's iPhone taps, the Android OS routes the SELECT APDU to our [`ColdTapApduService`](apps/android/app/src/main/java/com/coldtap/hce/ColdTapApduService.kt), which responds with `SESSION:<id>` and a success status.
+- **Merchant-side UI** for creating a session, picking an item, and watching the session flip to PAID via the same SSE stream the web dashboard uses.
+- **Standalone Kotlin project** — not a React Native `android/` folder, not shared code with the iOS app. Separate Gradle build, separate signing identity. (That's why the repo has `apps/ios/` and `apps/android/` as sibling top-level apps.)
 
-# iOS (physical device required for Ledger BLE + NFC)
-cd apps/ios && pod install
-npx react-native run-ios --device "Your iPhone"
+### What the web app is for
 
-# Android (physical device required for HCE)
-# Open apps/android/ in Android Studio, Run > 'app'.
-```
+[`apps/web/`](apps/web/) is the merchant dashboard + backend. It's a real Next.js app deployed to Vercel ([`coldtap-web.vercel.app`](https://coldtap-web.vercel.app)) — it serves the API both mobile apps hit, hosts the merchant-side live view over SSE, and provides a browser fallback for buyers without the iOS app. The mobile apps are the primary product; the web app is the connective tissue.
 
-To run against real testnet locally, set `XRPL_MODE=real` in `apps/web/.env.local` and make sure the Ledger's XRP account is testnet-funded.
+### Running it yourself
 
-See [`apps/ios/README.md`](apps/ios/README.md), [`apps/web/README.md`](apps/web/README.md), and [`apps/android/README.md`](apps/android/README.md) for per-app specifics.
+If you're reproducing the build locally, each app has its own README: [`apps/ios/README.md`](apps/ios/README.md), [`apps/android/README.md`](apps/android/README.md), [`apps/web/README.md`](apps/web/README.md). The iOS and Android apps both require physical devices (no simulators — BLE and HCE don't exist in emulators).
 
 ---
 
